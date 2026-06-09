@@ -62,6 +62,8 @@ body{
 .topbar-logo{font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-.3px;margin-right:auto}
 .topbar-logo span{color:var(--text2);font-weight:400}
 #product-subtitle{outline:none;cursor:text;display:inline-block;min-width:90px;vertical-align:baseline}
+#undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#1e293b;color:#fff;padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999}
+#undo-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #product-subtitle:empty::before{content:attr(data-placeholder);opacity:.28}
 #product-subtitle:not(:focus):hover{box-shadow:0 1px 0 var(--border)}
 
@@ -70,7 +72,12 @@ body{
   display:flex;align-items:center;gap:20px;flex-wrap:wrap;
   padding:8px 20px;background:var(--accent-light);
   border-bottom:1px solid #c7d2fe;flex-shrink:0;font-size:13px;
+  max-height:60px;overflow:hidden;
+  transition:max-height .22s ease,padding .22s ease,opacity .18s,border-color .18s;
 }
+.cfg-bar.cfg-hidden{max-height:0;padding-top:0;padding-bottom:0;border-bottom-color:transparent;opacity:0;pointer-events:none}
+.cfg-handle{height:4px;flex-shrink:0;cursor:ns-resize;background:linear-gradient(180deg,rgba(99,102,241,.12) 0%,transparent 100%);transition:background .15s}
+.cfg-handle:hover{background:linear-gradient(180deg,rgba(99,102,241,.32) 0%,transparent 100%)}
 .cfg-bar label{color:var(--text2);font-weight:500;display:flex;align-items:center;gap:6px}
 .cfg-bar input[type=date],.cfg-bar input[type=number]{
   padding:4px 9px;border:1px solid #c7d2fe;border-radius:7px;
@@ -78,6 +85,28 @@ body{
 }
 .cfg-bar input[type=number]{width:64px}
 .cfg-sep{flex:1}
+/* ── Milestones ── */
+.wk-hdr{position:relative;overflow:visible}
+.ms-hdr-pin{position:absolute;bottom:0;transform:translateX(-50%);z-index:6;text-align:center;pointer-events:auto;cursor:default}
+.ms-hdr-pin .ms-dia{font-size:11px;line-height:1;display:block}
+.ms-hdr-pin .ms-lbl{font-size:8px;display:block;white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis;opacity:.9;font-weight:600}
+.ms-gantt-overlay{position:absolute;top:0;left:0;height:9999px;pointer-events:none;z-index:5}
+.ms-overlay-line{position:absolute;top:0;height:100%;width:0;border-left:2px dashed;opacity:.45}
+/* ── Milestone modal ── */
+.ms-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:14px}
+.ms-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border-radius:7px;font-size:13px}
+input[type="color"].ms-swatch{-webkit-appearance:none;appearance:none;width:22px;height:22px;border:1px solid rgba(0,0,0,.15);border-radius:4px;padding:2px;cursor:pointer;flex-shrink:0;background:none}
+input[type="color"].ms-swatch::-webkit-color-swatch-wrapper{padding:0}
+input[type="color"].ms-swatch::-webkit-color-swatch{border:none;border-radius:2px}
+.ms-edit-name{border:none;background:transparent;font-size:13px;font-weight:500;color:var(--text);flex:1;padding:2px 5px;border-radius:4px;outline:none;min-width:0}
+.ms-edit-name:hover,.ms-edit-name:focus{background:var(--surface2)}
+.ms-edit-date{border:none;background:transparent;font-size:11px;color:var(--text2);width:94px;padding:2px 4px;border-radius:4px;outline:none;flex-shrink:0}
+.ms-edit-date:hover,.ms-edit-date:focus{background:var(--surface2)}
+.ms-item-del{border:none;background:none;cursor:pointer;color:var(--text2);font-size:15px;padding:0 2px;line-height:1}
+.ms-item-del:hover{color:#dc2626}
+.ms-add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.ms-add-row .form-group{margin-bottom:0;flex:1;min-width:120px}
+.ms-color-input{width:44px!important;padding:2px!important;height:34px;cursor:pointer;border-radius:6px!important}
 
 /* ── Buttons ── */
 .btn{
@@ -265,6 +294,20 @@ tbody tr:hover .edit-btn{opacity:1}
   position:absolute;top:0;left:0;height:100%;
   background:rgba(255,255,255,.20);
 }
+/* ── Gantt tooltip ── */
+#gantt-tooltip{
+  position:fixed;pointer-events:none;z-index:200;
+  background:#1e293b;color:#f1f5f9;
+  border-radius:9px;padding:10px 14px;
+  font-size:12px;line-height:1.7;
+  box-shadow:0 6px 20px rgba(0,0,0,.3);
+  max-width:230px;min-width:160px;
+  opacity:0;transition:opacity .12s;
+}
+#gantt-tooltip.visible{opacity:1}
+#gantt-tooltip .tip-name{font-size:13px;font-weight:700;display:block;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gantt-tooltip .tip-late{color:#fca5a5}
+#gantt-tooltip .tip-dim{color:#94a3b8;font-size:11px}
 .g-bar-label{
   position:relative;z-index:1;padding:0 8px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
@@ -373,6 +416,8 @@ select#f-gp option[value=P4]{background:#ddd6fe}
 </head>
 <body>
 
+<div id="undo-toast"></div>
+<div id="gantt-tooltip"></div>
 <!-- ── Topbar ── -->
 <div class="topbar">
   <div class="topbar-logo">Product Planner <span>→ Roadmap agile <span id="product-subtitle" contenteditable="true" spellcheck="false" data-placeholder="· votre produit"></span></span></div>
@@ -399,7 +444,7 @@ select#f-gp option[value=P4]{background:#ddd6fe}
 </div>
 
 <!-- ── Config bar ── -->
-<div class="cfg-bar">
+<div class="cfg-bar cfg-hidden" id="cfg-bar">
   <label>Date de départ
     <input type="date" id="cfg-date" oninput="onCfgChange()">
   </label>
@@ -413,7 +458,10 @@ select#f-gp option[value=P4]{background:#ddd6fe}
     <span id="zoom-label" style="font-size:12px;color:var(--text2);min-width:36px;text-align:center;font-weight:600"></span>
     <button class="btn btn-sm" onclick="setZoom(+1)" title="Zoomer (semaines plus larges)">+</button>
   </div>
+  <div style="width:1px;height:20px;background:#c7d2fe"></div>
+  <button class="btn btn-sm" onclick="openMsModal()" title="Gérer les jalons">◆ Jalons</button>
 </div>
+<div class="cfg-handle" id="cfg-handle"></div>
 
 <!-- ── Gantt ── -->
 <div class="gantt-outer">
@@ -522,6 +570,34 @@ select#f-gp option[value=P4]{background:#ddd6fe}
   </div>
 
   <div style="margin-left:auto;color:var(--text2)">Glisser la colonne ordre pour réordonner · ← → naviguer dans le temps</div>
+</div>
+
+<!-- ── Milestone modal ── -->
+<div class="overlay hidden" id="ms-overlay" onclick="if(event.target===this)closeMsModal()">
+  <div class="modal" style="width:420px" id="ms-modal">
+    <h2>◆ Jalons</h2>
+    <div class="ms-list" id="ms-list"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:0 0 14px">
+    <p style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Ajouter un jalon</p>
+    <div class="ms-add-row">
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" id="ms-name" placeholder="Ex : Release v1" maxlength="40">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="ms-date">
+      </div>
+      <div class="form-group" style="flex:0">
+        <label>Couleur</label>
+        <input type="color" id="ms-color" class="ms-color-input" value="#f59e0b">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="btn" onclick="closeMsModal()">Fermer</button>
+      <button class="btn btn-primary" onclick="saveMilestone()">+ Ajouter</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Modal ── -->
@@ -673,9 +749,11 @@ const GRAD = {
 //  State
 // ─────────────────────────────────────────────────────────────
 let state = {
-  config:   { startDate: todayISO(), totalDevs: 3 },
-  projects: [],
-  nextId:   1
+  config:     { startDate: todayISO(), totalDevs: 3 },
+  projects:   [],
+  milestones: [],
+  nextId:     1,
+  nextMsId:   1
 };
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -690,9 +768,42 @@ function loadState() {
       if (p.businessValue === undefined) p.businessValue = null;
       if (p.deadline === undefined) p.deadline = null;
     });
+    if (!state.milestones) state.milestones = [];
+    if (!state.nextMsId)   state.nextMsId   = 1;
   } catch(e) {}
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ── Toast ─────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('undo-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+// ── Undo ──────────────────────────────────────────────────────
+const UNDO_STACK = [];
+const UNDO_LIMIT = 30;
+function pushUndo() {
+  UNDO_STACK.push(JSON.stringify(state));
+  if (UNDO_STACK.length > UNDO_LIMIT) UNDO_STACK.shift();
+}
+function undoState() {
+  if (!UNDO_STACK.length) return;
+  const prev = JSON.parse(UNDO_STACK.pop());
+  Object.assign(state, prev);
+  saveState(); render();
+  showToast('Annulé ✓');
+}
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    if (document.activeElement && document.activeElement.isContentEditable) return;
+    if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+    e.preventDefault(); undoState();
+  }
+});
 
 // ─────────────────────────────────────────────────────────────
 //  Date helpers — weeks start on Monday
@@ -734,6 +845,7 @@ function initConfig() {
   document.getElementById('cfg-devs').value = state.config.totalDevs;
 }
 function onCfgChange() {
+  pushUndo();
   state.config.startDate = document.getElementById('cfg-date').value || todayISO();
   state.config.totalDevs = Math.max(1, parseInt(document.getElementById('cfg-devs').value) || 1);
   saveState(); render();
@@ -930,6 +1042,16 @@ function render() {
     + '<th class="c-dates">Dates / Deadline</th>'
     + '</tr>';
 
+  // ── Milestone map (week → [{name,color,dayOff}]) ──────────
+  const msMap = {};
+  (state.milestones || []).forEach(ms => {
+    const mw = dateToWeek(ms.date);
+    const msDate = new Date(ms.date + 'T00:00:00');
+    const dayOff = (msDate.getDay() + 6) % 7;
+    if (!msMap[mw]) msMap[mw] = [];
+    msMap[mw].push({ id: ms.id, name: ms.name, color: ms.color || '#f59e0b', dayOff });
+  });
+
   const wp = WEEK_PX();
   let htrRight = '<tr>';
   for (let w = wStart; w < wEnd; w++) {
@@ -958,7 +1080,12 @@ function render() {
     if (w === tw)         cls += ' wk-today';
     if (d.getDate() <= 7) cls += ' wk-month-start';
     const line = w === tw ? '<div class="today-line"></div>' : '';
-    htrRight += `<th class="${cls}"><div style="width:${wp}px;${overflowStyle}white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
+    let msPins = '';
+    if (msMap[w]) msMap[w].forEach(ms => {
+      const lx = Math.round(ms.dayOff * wp / 7);
+      msPins += `<div class="ms-hdr-pin" style="left:${lx}px;color:${ms.color}" title="${ms.name}"><span class="ms-dia">◆</span><span class="ms-lbl">${ms.name}</span></div>`;
+    });
+    htrRight += `<th class="${cls}" style="position:relative"><div style="width:${wp}px;${overflowStyle}white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div>${msPins}</th>`;
   }
   htrRight += '</tr>';
   document.getElementById('gantt-head-left').innerHTML  = htrLeft;
@@ -1042,43 +1169,44 @@ function render() {
     }
 
     if (!isDone && s && s.startWeek !== null && s.startWeek < wEnd) {
-      const barStart = s.startWeek;
-      const barEnd   = Math.min(s.endWeek, wEnd);
-      const barSpan  = barEnd - barStart;
+      const barStart  = s.startWeek;
+      const barEnd    = Math.min(s.endWeek, wEnd);
+      // cellStart = first visible column of the bar cell (barStart may be off-screen)
+      const cellStart = Math.max(barStart, wStart);
+      const barSpan   = barEnd - cellStart;
 
-      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
+      for (let w = wStart; w < cellStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
 
-      // barW unused — bar now uses left/right instead of explicit px width
       const fillW  = Math.round(progPct);
       const label  = barSpan >= 2
         ? `${proj.name} — ${progPct}%`
         : (barSpan === 1 ? `${progPct}%` : '');
 
-      // Today line inside bar cell
+      // Today line inside bar cell (position relative to cellStart)
       let todayInBar = '';
-      if (tw >= barStart && tw < barEnd) {
-        const lx = (tw - barStart) * WEEK_PX();
+      if (tw >= cellStart && tw < barEnd) {
+        const lx = (tw - cellStart) * WEEK_PX();
         todayInBar = `<div class="today-line" style="left:${lx}px"></div>`;
       }
 
-      // Deadline double line inside bar cell (if it falls within the bar span)
+      // Deadline double line inside bar cell
       let dlFlag = '';
-      if (dlWeek !== null && dlWeek >= barStart && dlWeek < barEnd) {
-        const dlX = (dlWeek - barStart) * WEEK_PX() + dlDayOffset * WEEK_PX() / 7;
+      if (dlWeek !== null && dlWeek >= cellStart && dlWeek < barEnd) {
+        const dlX = (dlWeek - cellStart) * WEEK_PX() + dlDayOffset * WEEK_PX() / 7;
         dlFlag = `<div class="deadline-line" style="left:${dlX}px" title="Deadline"></div>`;
       }
-      // Start-date constraint line inside bar (if it falls within the bar span)
-      if (sdWeek !== null && sdWeek >= barStart && sdWeek < barEnd) {
-        const sdX = (sdWeek - barStart) * WEEK_PX() + sdDayOffset * WEEK_PX() / 7;
+      // Start-date constraint line inside bar
+      if (sdWeek !== null && sdWeek >= cellStart && sdWeek < barEnd) {
+        const sdX = (sdWeek - cellStart) * WEEK_PX() + sdDayOffset * WEEK_PX() / 7;
         dlFlag += `<div class="startdate-line" style="left:${sdX}px" title="Date de démarrage"></div>`;
       }
 
       let barCls = 'bar-cell';
-      if (tw >= barStart && tw < barEnd) barCls += ' wk-today-col';
+      if (tw >= cellStart && tw < barEnd) barCls += ' wk-today-col';
 
       wkCells += `<td class="${barCls}" colspan="${barSpan}">
         ${todayInBar}${dlFlag}
-        <div class="g-bar" style="left:3px;right:3px;background:${gradient}">
+        <div class="g-bar" data-id="${proj.id}" data-start="${weekToDate(barStart).toISOString().slice(0,10)}" data-end="${weekToDate(barEnd-1).toISOString().slice(0,10)}" style="left:3px;right:3px;background:${gradient}">
           <div class="g-bar-fill" style="width:${fillW}%"></div>
           <div class="g-bar-label">${label}</div>
         </div>
@@ -1122,6 +1250,34 @@ function render() {
 
   document.getElementById('gantt-body-left').innerHTML  = rowsLeft;
   document.getElementById('gantt-body-right').innerHTML = rowsRight;
+
+  // ── Milestone overlay (one absolute layer over the full gantt height) ──
+  // Position is derived from the actual rendered th to avoid any table border/padding drift.
+  const _wrap      = document.getElementById('gantt-wrapper');
+  const _wrapLeft  = _wrap.getBoundingClientRect().left;
+  const _scrollL   = _wrap.scrollLeft;
+  const _ths       = document.querySelectorAll('#gantt-head-right th');
+  let overlayHTML = '';
+  (state.milestones || []).forEach(ms => {
+    const mw = dateToWeek(ms.date);
+    if (mw < wStart || mw >= wEnd) return;
+    const th = _ths[mw - wStart];
+    if (!th) return;
+    const msDate = new Date(ms.date + 'T00:00:00');
+    const dayOff = (msDate.getDay() + 6) % 7;
+    const thR = th.getBoundingClientRect();
+    const lx  = Math.round(thR.left - _wrapLeft + _scrollL + dayOff * thR.width / 7);
+    overlayHTML += `<div class="ms-overlay-line" style="left:${lx}px;border-color:${ms.color||'#f59e0b'}" title="${ms.name}"></div>`;
+  });
+  let msOverlay = document.getElementById('ms-gantt-overlay');
+  if (!msOverlay) {
+    msOverlay = document.createElement('div');
+    msOverlay.id = 'ms-gantt-overlay';
+    msOverlay.className = 'ms-gantt-overlay';
+    _wrap.appendChild(msOverlay);
+  }
+  msOverlay.innerHTML = overlayHTML;
+
   bindDrag();
 
   // Show/hide empty state
@@ -1263,6 +1419,7 @@ function saveProject() {
     hasError = true;
   }
   if (hasError) return;
+  pushUndo();
 
   const existingId = id ? parseInt(id) : null;
 
@@ -1288,6 +1445,7 @@ function saveProject() {
 function deleteProject() {
   const id = parseInt(document.getElementById('f-id').value);
   if (!id || !confirm('Supprimer ce projet ?')) return;
+  pushUndo();
   state.projects = state.projects.filter(p => p.id !== id);
   normalizePriorities();
   saveState(); closeModal(); render();
@@ -1316,6 +1474,7 @@ function inlineEditName(e) {
   const onSave = () => {
     const newName = input.value.trim();
     if (newName && newName !== proj.name) {
+      pushUndo();
       proj.name = newName;
       saveState();
     }
@@ -1360,6 +1519,7 @@ function inlineEditPriority(e) {
   const onSave = () => {
     const newGp = select.value;
     if (newGp !== proj.globalPriority) {
+      pushUndo();
       proj.globalPriority = newGp;
       saveState();
     }
@@ -1401,6 +1561,7 @@ function inlineEditDevs(e) {
   const onSave = () => {
     const newDevs = parseInt(input.value);
     if (newDevs >= 1 && newDevs <= 20 && newDevs !== proj.devsNeeded) {
+      pushUndo();
       proj.devsNeeded = newDevs;
       saveState();
     }
@@ -1443,6 +1604,7 @@ function inlineEditProgress(e) {
   const onSave = () => {
     const newProgress = Math.max(0, Math.min(100, parseInt(input.value) || 0));
     if (newProgress !== proj.progress) {
+      pushUndo();
       proj.progress = newProgress;
       saveState();
     }
@@ -1486,6 +1648,7 @@ function inlineEditBV(e) {
     const val = input.value.trim();
     const newBV = val === '' ? null : Math.max(0, Math.min(1000, parseInt(val) || 0));
     if (newBV !== proj.businessValue) {
+      pushUndo();
       proj.businessValue = newBV;
       saveState();
     }
@@ -1524,6 +1687,7 @@ function inlineEditDeadline(e) {
   const onSave = () => {
     const newDeadline = input.value || null;
     if (newDeadline !== proj.deadline) {
+      pushUndo();
       proj.deadline = newDeadline;
       saveState();
     }
@@ -1598,6 +1762,7 @@ function onDrop(e) {
   this.classList.remove('drag-over-top','drag-over-bottom');
   const targetId = parseInt(this.dataset.id);
   if (!targetId || targetId === dragId) return;
+  pushUndo();
   const r     = this.getBoundingClientRect();
   const after = e.clientY >= r.top + r.height / 2;
   const sorted = [...state.projects].sort((a, b) => a.priority - b.priority);
@@ -1701,6 +1866,111 @@ function importData(event) {
 loadState();
 initConfig();
 render();
+
+// ── Cfg-bar show/hide ─────────────────────────────────────────
+(function() {
+  const bar    = document.getElementById('cfg-bar');
+  const handle = document.getElementById('cfg-handle');
+  let hideTimer = null;
+  function showCfg() { clearTimeout(hideTimer); bar.classList.remove('cfg-hidden'); }
+  function schedulHide() { hideTimer = setTimeout(() => bar.classList.add('cfg-hidden'), 250); }
+  handle.addEventListener('mouseenter', showCfg);
+  handle.addEventListener('mouseleave', schedulHide);
+  bar.addEventListener('mouseenter', showCfg);
+  bar.addEventListener('mouseleave', schedulHide);
+})();
+
+// ── Milestones ────────────────────────────────────────────────
+function openMsModal() {
+  renderMsList();
+  document.getElementById('ms-name').value  = '';
+  document.getElementById('ms-date').value  = '';
+  document.getElementById('ms-color').value = '#f59e0b';
+  document.getElementById('ms-overlay').classList.remove('hidden');
+  document.getElementById('ms-name').focus();
+}
+function closeMsModal() {
+  document.getElementById('ms-overlay').classList.add('hidden');
+}
+function renderMsList() {
+  const list = document.getElementById('ms-list');
+  const ms   = state.milestones || [];
+  if (!ms.length) { list.innerHTML = '<p style="color:var(--text2);font-size:13px;margin:0">Aucun jalon pour l\'instant.</p>'; return; }
+  list.innerHTML = ms
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .map(m => `<div class="ms-item">
+      <input type="color" class="ms-swatch" value="${m.color}" title="Couleur" onchange="updateMilestone(${m.id},'color',this.value)">
+      <input type="text"  class="ms-edit-name" value="${m.name.replace(/"/g,'&quot;')}" maxlength="40"
+             onblur="updateMilestone(${m.id},'name',this.value)"
+             onkeydown="if(event.key==='Enter')this.blur()">
+      <input type="date"  class="ms-edit-date" value="${m.date}" onchange="updateMilestone(${m.id},'date',this.value)">
+      <button class="ms-item-del" onclick="deleteMilestone(${m.id})" title="Supprimer">✕</button>
+    </div>`).join('');
+}
+function updateMilestone(id, field, value) {
+  const ms = (state.milestones || []).find(m => m.id === id);
+  if (!ms) return;
+  const v = typeof value === 'string' ? value.trim() : value;
+  if (!v || v === ms[field]) return;
+  pushUndo();
+  ms[field] = v;
+  saveState(); render();
+}
+function saveMilestone() {
+  const name  = document.getElementById('ms-name').value.trim();
+  const date  = document.getElementById('ms-date').value;
+  const color = document.getElementById('ms-color').value;
+  if (!name || !date) { if(!name) document.getElementById('ms-name').focus(); else document.getElementById('ms-date').focus(); return; }
+  pushUndo();
+  state.milestones.push({ id: state.nextMsId++, name, date, color });
+  saveState();
+  renderMsList();
+  render();
+  document.getElementById('ms-name').value = '';
+  document.getElementById('ms-date').value = '';
+  document.getElementById('ms-name').focus();
+}
+function deleteMilestone(id) {
+  pushUndo();
+  state.milestones = state.milestones.filter(m => m.id !== id);
+  saveState();
+  renderMsList();
+  render();
+}
+
+// ── Gantt bar tooltip ─────────────────────────────────────────
+(function() {
+  const tip = document.getElementById('gantt-tooltip');
+  const wrap = document.getElementById('gantt-wrapper');
+  const fmtD = s => new Date(s + 'T00:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'2-digit' });
+
+  wrap.addEventListener('mousemove', e => {
+    const bar = e.target.closest('.g-bar');
+    if (!bar) { tip.classList.remove('visible'); return; }
+    const id = parseInt(bar.dataset.id);
+    const proj = state.projects.find(p => p.id === id);
+    if (!proj) return;
+
+    const endDate   = bar.dataset.end   ? new Date(bar.dataset.end   + 'T00:00:00') : null;
+    const deadlineD = proj.deadline     ? new Date(proj.deadline      + 'T00:00:00') : null;
+    const isLate    = endDate && deadlineD && endDate > deadlineD;
+
+    let html = `<span class="tip-name">${proj.name}</span>`;
+    html += `📅 ${fmtD(bar.dataset.start)} → ${fmtD(bar.dataset.end)}<br>`;
+    html += `⚡ Avancement : <b>${proj.progress}%</b><br>`;
+    html += `👥 ${proj.devsNeeded} dev${proj.devsNeeded > 1 ? 's' : ''} requis`;
+    if (proj.deadline) html += `<br>${isLate ? '<span class="tip-late">⚠ Deadline : ' : '🎯 Deadline : '}${fmtD(proj.deadline)}${isLate ? '</span>' : ''}`;
+    if (proj.businessValue != null) html += `<br><span class="tip-dim">BV : ${proj.businessValue}</span>`;
+
+    tip.innerHTML = html;
+    tip.classList.add('visible');
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.min(e.clientX + 16, window.innerWidth  - tw - 8) + 'px';
+    tip.style.top  = Math.max(8, e.clientY - th - 10) + 'px';
+  });
+
+  wrap.addEventListener('mouseleave', () => tip.classList.remove('visible'));
+})();
 
 // Editable product subtitle in topbar
 (function() {

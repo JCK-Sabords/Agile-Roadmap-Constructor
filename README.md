@@ -9,6 +9,10 @@ Une application de **planification de type Gantt** locale, simple et efficace po
 - 📅 **Gestion des deadlines** avec alertes en rouge + double ligne verticale sur la frise
 - 🗓️ **Date de démarrage** optionnelle par projet (un projet ne démarre jamais avant) — visible dans la colonne Dates et sur la frise (ligne verte avec flèches)
 - ✏️ **Sous-titre produit éditable** dans la topbar (clique sur "· votre produit" pour personnaliser, persisté en localStorage)
+- 💬 **Tooltip hover** sur les barres Gantt — nom, dates, avancement, devs, deadline (rouge si dépassée)
+- ↩️ **Undo (Ctrl+Z)** — annule la dernière modification (30 niveaux, toast de confirmation)
+- ◆ **Milestones éditables** — jalons transversaux datés (◆ dans le header + ligne overlay sur toutes les lignes) ; nom, date et couleur éditables inline dans la modale
+- 🙈 **Barre de config masquable** — révélée au survol d'une zone de 4px sous la topbar
 - 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs et parallélisation
 - ✏️ **Édition inline** — clic direct sur les colonnes (nom, priorité, devs, avancement, BV, deadline)
 - 📈 **Durée allongée précise** calculée semaine par semaine selon la capacité réelle
@@ -172,7 +176,7 @@ Avantages :
 
 ## 📋 Historique des features
 
-Pour voir les **23 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **29 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 

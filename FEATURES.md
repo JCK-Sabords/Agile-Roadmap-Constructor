@@ -341,6 +341,95 @@
 
 ---
 
+## 24. Undo — Ctrl+Z
+
+**Demande :**
+> Ajouter un undo (Ctrl+Z) pour annuler la dernière action.
+
+**Features livrées :**
+- `UNDO_STACK` (tableau en mémoire, limite 30 entrées) + `pushUndo()` / `undoState()`
+- `pushUndo()` appelé juste avant chaque mutation réelle dans les 9 fonctions : `onCfgChange`, `saveProject`, `deleteProject`, `inlineEditName/Priority/Devs/Progress/BV/Deadline`, `onDrop`
+- Raccourci `Ctrl+Z` (ou `Cmd+Z` Mac) via `keydown` sur `document` — ignoré si focus dans un champ de texte ou `contenteditable`
+- Toast "Annulé ✓" affiché 1,8 s en bas de l'écran après chaque undo
+- `showToast()` réutilisable (timeleur auto-reset)
+
+---
+
+## 25. Tooltip hover sur les barres Gantt
+
+**Demande :**
+> Voir les infos du projet au survol d'une barre Gantt sans ouvrir la modale.
+
+**Features livrées :**
+- `<div id="gantt-tooltip">` positionné en `position:fixed`, suivi du curseur via `mousemove` sur `#gantt-wrapper`
+- Contenu : nom (gras), dates début→fin planifiées, avancement %, devs requis, deadline (rouge ⚠ si dépassée), BV si renseignée
+- Dates stockées en `data-start` / `data-end` sur chaque `.g-bar` lors du `render()`
+- Disparaît sur `mouseleave` du panel Gantt ou quand le curseur quitte une barre
+- Style dark card (fond `#1e293b`, `border-radius:9px`, `opacity` animée)
+
+---
+
+## 26. Barre de config masquable (révélée au survol)
+
+**Demande :**
+> Masquer la barre de config (date départ, devs, zoom) et la révéler au survol d'une zone de 3px en haut de la frise.
+
+**Features livrées :**
+- `.cfg-bar` démarre avec la classe `cfg-hidden` (`max-height:0; opacity:0; pointer-events:none`)
+- Transition CSS fluide sur `max-height`/`opacity`/`padding`
+- `.cfg-handle` (4px, dégradé indigo) positionné juste sous la topbar — hover → révèle la barre
+- La barre reste visible tant que la souris est dessus ; se rétracte après 250 ms de mouseout (évite les fermetures involontaires)
+- Bouton **◆ Jalons** ajouté dans la barre de config
+
+---
+
+## 27. Milestones — jalons transversaux
+
+**Demande :**
+> Jalons datés (◆ sur la frise, partagés entre projets) pour les releases, sprint ends, comités...
+
+**Features livrées :**
+- `state.milestones[]` : `{id, name, date, color}` + `state.nextMsId`
+- `msMap` calculé à chaque `render()` : semaine → [{name, color, dayOff}]
+- **Header frise** : ◆ `ms-hdr-pin` positionné au jour exact avec nom tronqué en dessous
+- **Toutes les lignes** : ligne verticale pointillée colorée via `mkMsLines()` dans `mkEmptyCell()` ET dans les barres Gantt
+- Modal **◆ Jalons** : liste triée par date avec swatches de couleur + bouton supprimer, formulaire d'ajout (nom + date + `<input type="color">`)
+- Undo compatible (`pushUndo()` sur ajout et suppression)
+
+---
+
+## 28. Correction bug jalons — overlay absolu
+
+**Demande :**
+> La ligne du jalon est décalée quand elle arrive sur certains projets.
+
+**Cause identifiée :**
+- Les lignes `ms-line` étaient injectées cellule par cellule dans le tableau. Pour les projets dont la barre commence avant la zone visible (`barStart < wStart`), la position était calculée depuis le début hors-écran de la barre → décalage visible proportionnel au dépassement.
+- Tentative de fix `cellStart = Math.max(barStart, wStart)` insuffisante car la largeur réelle des colonnes (avec bordures) diffère de `WEEK_PX()`.
+
+**Fix livré :**
+- Suppression de toutes les `ms-line` par cellule et de `mkMsLines()`
+- **Overlay absolu unique** : `<div id="ms-gantt-overlay">` en `position:absolute; top:0; left:0; height:9999px` enfant de `.gantt-wrapper` (qui est `position:relative`)
+- La position de chaque ligne est lue depuis le DOM réel après rendu : `th.getBoundingClientRect().left - wrapperRect.left + scrollLeft + dayOff * th.width / 7` → alignement pixel-perfect indépendant des bordures/padding
+- La ligne traverse toute la hauteur du Gantt en un seul élément, sans dépendance aux cellules individuelles
+
+---
+
+## 29. Jalons éditables inline
+
+**Demande :**
+> Rendre les jalons éditables (couleur, nom et date) directement dans l'onglet Jalons.
+
+**Features livrées :**
+- Chaque ligne de la liste jalons affiche désormais trois champs directement éditables :
+  - **`<input type="color">`** remplace le simple swatch — clic → color picker natif, changement immédiat
+  - **`<input type="text">`** pour le nom — sauvegarde au blur ou à la touche Entrée
+  - **`<input type="date">`** pour la date — sauvegarde à la sélection
+- Nouvelle fonction `updateMilestone(id, field, value)` : ignore les valeurs vides ou inchangées, `pushUndo()` avant toute mutation → Ctrl+Z compatible
+- Styles doux : fond `var(--surface2)` au hover/focus, invisible au repos — rendu cohérent avec l'édition inline du reste de l'interface
+
+---
+
 ## Stack technique
 
 | Élément | Choix |
