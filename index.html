@@ -167,6 +167,24 @@ tbody tr.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--accent)}
 .gp-P3{background:#bfdbfe;color:#1e40af}
 .gp-P4{background:#ddd6fe;color:#5b21b6}
 
+/* ── Priority/Order badge ── */
+.prio-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:32px;height:28px;padding:0 8px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-d));
+  color:#fff;font-size:12px;font-weight:700;letter-spacing:.05em;
+  box-shadow:0 2px 4px rgba(0,0,0,.1);
+  transition:all .15s;user-select:none;
+}
+.prio-badge:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 8px rgba(0,0,0,.15);
+}
+.prio-badge:active{
+  transform:translateY(0);
+  cursor:grabbing;
+}
+
 /* ── Name cell ── */
 .cell-name{display:flex;align-items:center;padding:0 6px;gap:0;min-width:0}
 .proj-name-text{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 4px;cursor:text;transition:color .1s}
@@ -689,6 +707,32 @@ function onCfgChange() {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  Helper: Calculate project duration accounting for other projects
+//  Simulates week-by-week, counting actual available capacity
+// ─────────────────────────────────────────────────────────────
+function calculateProjectEndWeek(startWeek, devWeekBudget, devFreeAt) {
+  let capacity = 0;
+  let week = startWeek;
+  const safetyLimit = startWeek + 500;
+  const totalDevs = devFreeAt.length;
+
+  while (capacity < devWeekBudget && week < safetyLimit) {
+    // Count how many devs are BUSY (still assigned to other projects at this week)
+    const busyDevsAtWeek = devFreeAt.filter(t => t > week).length;
+
+    // Available for THIS project = total - busy
+    const availableForProject = totalDevs - busyDevsAtWeek;
+
+    // Add available devs this week to our capacity
+    capacity += availableForProject;
+    if (capacity >= devWeekBudget) return week + 1;
+    week++;
+  }
+
+  return week + 1;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Scheduling — event-driven bin-packing with proportional scaling
 // ─────────────────────────────────────────────────────────────
 function schedule() {
@@ -746,16 +790,21 @@ function schedule() {
         pending.splice(i, 1);
         if (i === 0) topHandled = true;
       } else if (!topHandled && i === 0) {
-        // Proportional scaling: start with fewer devs
+        // Proportional scaling: allocate available devs, project continues
+        // until all work is done, accounting for more devs becoming available
         const actualDevs    = avail;
         const devWeekBudget = proj.remainingWeeks * need;
-        const scaledWeeks   = Math.ceil(devWeekBudget / actualDevs);
         const idx           = freeQueue.splice(0, actualDevs).map(([, j]) => j);
-        proj.startWeek      = currentWeek;
-        proj.endWeek        = currentWeek + scaledWeeks;
-        proj.remainingWeeks = scaledWeeks;
-        proj.scaled         = true;
+
+        // Calculate actual end week FIRST, accounting for when other devs become free
+        proj.startWeek = currentWeek;
+        proj.endWeek = calculateProjectEndWeek(currentWeek, devWeekBudget, devFreeAt);
+        proj.remainingWeeks = proj.endWeek - currentWeek;
+        proj.scaled = true;
+
+        // Update devFreeAt: these allocated devs are now busy until endWeek
         idx.forEach(j => { devFreeAt[j] = proj.endWeek; });
+
         avail = 0;
         pending.splice(i, 1);
         topHandled = true;
@@ -850,20 +899,37 @@ function render() {
   const wp = WEEK_PX();
   for (let w = wStart; w < wEnd; w++) {
     const d = weekToDate(w);
-    // Abbreviate label based on zoom level so text never widens the column
+    // Label strategy: prioritize months over days
     let label;
-    if (wp >= 64)      label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-    else if (wp >= 40) label = d.getDate();          // just day number: "15"
-    else if (wp >= 28) label = d.getDate() <= 7      // only show first week of month
-                               ? d.toLocaleDateString('fr-FR', { month: 'short' }) : '';
-    else               label = '';                   // no text at 24 px
+    let overflowStyle = 'overflow:hidden;';
+
+    if (wp >= 64) {
+      // >=64px: show day + month (both fit)
+      label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    } else if (wp >= 28) {
+      // 28-63px: show month only (day is optional)
+      // Only show month label at the start of each month to avoid redundancy
+      if (d.getDate() <= 7) {
+        label = d.toLocaleDateString('fr-FR', { month: 'short' });
+      } else {
+        label = '';
+      }
+    } else {
+      // <28px (24px zoom): show month always, allow overflow
+      overflowStyle = 'overflow:visible;';
+      if (d.getDate() <= 7) {
+        label = d.toLocaleDateString('fr-FR', { month: 'short' });
+      } else {
+        label = '';
+      }
+    }
 
     let cls = 'wk-hdr';
     if (w === tw)         cls += ' wk-today';
     if (d.getDate() <= 7) cls += ' wk-month-start';
     const line = w === tw ? '<div class="today-line"></div>' : '';
-    // Wrap in a fixed-width div so the <th> can NEVER expand beyond wp
-    htr += `<th class="${cls}"><div style="width:${wp}px;overflow:hidden;white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
+    // Wrap in a fixed-width div with dynamic overflow handling
+    htr += `<th class="${cls}"><div style="width:${wp}px;${overflowStyle}white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
   }
   htr += '</tr>';
   document.getElementById('gantt-head').innerHTML = htr;
@@ -889,11 +955,14 @@ function render() {
 
     const progPct = Math.min(100, Math.max(0, proj.progress));
 
+    // Calculate initial remaining weeks (before scaling)
+    const initialRemaining = Math.max(0, Math.ceil(proj.totalWeeks * (1 - proj.progress / 100)));
+
     // Remaining chip
     let remChip;
     if (isDone)           remChip = `<span class="rem-chip done">✓ Terminé</span>`;
     else if (isLate)      remChip = `<span class="rem-chip late">⚠ ${remaining}s</span>`;
-    else if (s && s.scaled) remChip = `<span class="rem-chip scaled">${remaining}s ↗</span>`;
+    else if (s && s.scaled) remChip = `<span class="rem-chip scaled">${initialRemaining}→${remaining}s</span>`;
     else                  remChip = `<span class="rem-chip ${isActive?'active':''}">${remaining}s</span>`;
 
     // Dates cell
@@ -970,11 +1039,10 @@ function render() {
 
     rows += `
       <tr draggable="true" data-id="${proj.id}">
-        <td class="c-prio st" title="Glisser pour réordonner">${proj.priority}</td>
+        <td class="c-prio st" title="Glisser pour réordonner"><span class="prio-badge">${proj.priority}</span></td>
         <td class="c-name st">
           <div class="cell-name">
             <span class="proj-name-text" title="${proj.name}" data-id="${proj.id}" onclick="inlineEditName(event)">${proj.name}</span>
-            ${proj.businessValue !== null && proj.businessValue !== '' ? `<span class="bv-inline">BV:${proj.businessValue}</span>` : ''}
             <button class="edit-btn" onclick="openEditModal(${proj.id})">✎</button>
           </div>
         </td>
@@ -984,7 +1052,7 @@ function render() {
         <td class="c-devs st" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}" data-id="${proj.id}" onclick="inlineEditDevs(event)">
           ${proj.devsNeeded}/${state.config.totalDevs}
         </td>
-        <td class="c-prog st">
+        <td class="c-prog st" data-id="${proj.id}" onclick="inlineEditProgress(event)" style="text-align:center;cursor:pointer">
           <div class="cell-prog">
             <div class="prog-inner">
               <div class="prog-label">${progPct}%</div>
@@ -993,8 +1061,8 @@ function render() {
           </div>
         </td>
         <td class="c-rem st" style="text-align:center">${remChip}</td>
-        <td class="c-bv st" style="text-align:center">${bvHtml}</td>
-        <td class="c-dates st"><div class="dates-cell">${datesHtml}</div></td>
+        <td class="c-bv st" style="text-align:center" data-id="${proj.id}" onclick="inlineEditBV(event)">${bvHtml}</td>
+        <td class="c-dates st" data-id="${proj.id}" onclick="inlineEditDeadline(event)"><div class="dates-cell">${datesHtml}</div></td>
         ${wkCells}
       </tr>`;
   });
@@ -1291,6 +1359,128 @@ function inlineEditDevs(e) {
   td.appendChild(input);
   input.focus();
   input.select();
+}
+
+function inlineEditProgress(e) {
+  e.stopPropagation();
+  const td = e.currentTarget;
+  const id = parseInt(td.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.max = '100';
+  input.value = proj.progress;
+  input.style.width = '100%';
+  input.style.padding = '4px';
+  input.style.border = '2px solid var(--accent)';
+  input.style.borderRadius = '4px';
+  input.style.fontFamily = 'inherit';
+  input.style.fontSize = '13px';
+  input.style.textAlign = 'center';
+
+  const onSave = () => {
+    const newProgress = Math.max(0, Math.min(100, parseInt(input.value) || 0));
+    if (newProgress !== proj.progress) {
+      proj.progress = newProgress;
+      saveState();
+    }
+    render();
+  };
+
+  input.addEventListener('blur', onSave);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') onSave();
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+function inlineEditBV(e) {
+  e.stopPropagation();
+  const td = e.currentTarget;
+  const id = parseInt(td.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.max = '1000';
+  input.value = proj.businessValue || '';
+  input.style.width = '100%';
+  input.style.padding = '4px';
+  input.style.border = '2px solid var(--accent)';
+  input.style.borderRadius = '4px';
+  input.style.fontFamily = 'inherit';
+  input.style.fontSize = '13px';
+  input.style.textAlign = 'center';
+
+  const onSave = () => {
+    const val = input.value.trim();
+    const newBV = val === '' ? null : Math.max(0, Math.min(1000, parseInt(val) || 0));
+    if (newBV !== proj.businessValue) {
+      proj.businessValue = newBV;
+      saveState();
+    }
+    render();
+  };
+
+  input.addEventListener('blur', onSave);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') onSave();
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+function inlineEditDeadline(e) {
+  e.stopPropagation();
+  const td = e.currentTarget;
+  const id = parseInt(td.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.value = proj.deadline || '';
+  input.style.padding = '4px';
+  input.style.border = '2px solid var(--accent)';
+  input.style.borderRadius = '4px';
+  input.style.fontFamily = 'inherit';
+  input.style.fontSize = '13px';
+
+  const onSave = () => {
+    const newDeadline = input.value || null;
+    if (newDeadline !== proj.deadline) {
+      proj.deadline = newDeadline;
+      saveState();
+    }
+    render();
+  };
+
+  input.addEventListener('blur', onSave);
+  input.addEventListener('change', onSave);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
 }
 
 // ─────────────────────────────────────────────────────────────
