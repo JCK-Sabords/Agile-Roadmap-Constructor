@@ -710,7 +710,7 @@ function onCfgChange() {
 //  Helper: Calculate project duration accounting for other projects
 //  Simulates week-by-week, counting actual available capacity
 // ─────────────────────────────────────────────────────────────
-function calculateProjectEndWeek(startWeek, devWeekBudget, devFreeAt) {
+function calculateProjectEndWeek(startWeek, devWeekBudget, devFreeAt, maxParallel) {
   let capacity = 0;
   let week = startWeek;
   const safetyLimit = startWeek + 500;
@@ -720,11 +720,15 @@ function calculateProjectEndWeek(startWeek, devWeekBudget, devFreeAt) {
     // Count how many devs are BUSY (still assigned to other projects at this week)
     const busyDevsAtWeek = devFreeAt.filter(t => t > week).length;
 
-    // Available for THIS project = total - busy
-    const availableForProject = totalDevs - busyDevsAtWeek;
+    // Devs free this week = total - busy.
+    // But this project can absorb at most `maxParallel` devs per week
+    // (its parallelization limit = devsNeeded). Extra free devs can't be
+    // used by this project in a single week.
+    const freeThisWeek = totalDevs - busyDevsAtWeek;
+    const usedThisWeek = Math.min(freeThisWeek, maxParallel);
 
-    // Add available devs this week to our capacity
-    capacity += availableForProject;
+    // Add the work actually done this week to our cumulative capacity
+    capacity += usedThisWeek;
     if (capacity >= devWeekBudget) return week + 1;
     week++;
   }
@@ -798,7 +802,7 @@ function schedule() {
 
         // Calculate actual end week FIRST, accounting for when other devs become free
         proj.startWeek = currentWeek;
-        proj.endWeek = calculateProjectEndWeek(currentWeek, devWeekBudget, devFreeAt);
+        proj.endWeek = calculateProjectEndWeek(currentWeek, devWeekBudget, devFreeAt, need);
         proj.remainingWeeks = proj.endWeek - currentWeek;
         proj.scaled = true;
 

@@ -7,7 +7,10 @@ Une application de **planification de type Gantt** locale, simple et efficace po
 - 📊 **Gantt interactif** avec barres colorées et glisser-déposer vertical
 - 🎯 **Système de priorités** (P1-P4) avec codes couleur automatiques
 - 📅 **Gestion des deadlines** avec alertes visuelles en rouge
-- 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs
+- 🗓️ **Date de démarrage** optionnelle par projet (un projet ne démarre jamais avant)
+- 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs et parallélisation
+- ✏️ **Édition inline** — clic direct sur les colonnes (nom, priorité, devs, avancement, BV, deadline)
+- 📈 **Durée allongée précise** calculée semaine par semaine selon la capacité réelle
 - 🎨 **Zoom dynamique** (7 niveaux) pour explorer votre planning
 - 💾 **Persistance localStorage** — aucune base de données requise
 - 📤 **Export/Import JSON** pour sauvegarder et restaurer vos données
@@ -65,11 +68,25 @@ Cliquez sur **+ Nouveau projet** et remplissez :
 - **Développeurs nécessaires** ⭐ (obligatoire)
 - **Priorité globale** (P1–P4) ⭐ (obligatoire)
 - **Business Value** (optionnel)
+- **Date de démarrage** (optionnel — le projet ne commencera pas avant cette date)
 - **Deadline** (optionnel — affichée en rouge si dépassée)
+
+### Édition rapide (inline)
+
+Cliquez directement sur une cellule du tableau pour la modifier sans ouvrir la modale :
+
+- **Projet** → renomme le projet
+- **P.** → liste déroulante de la priorité P1–P4
+- **Devs** → nombre de développeurs
+- **Avancement** → pourcentage (0–100)
+- **BV** → Business Value
+- **Dates** → deadline
+
+Pour les champs non visibles dans le tableau, survolez la ligne et cliquez sur le crayon ✎.
 
 ### Organiser vos projets
 
-- **Glisser-déposer** verticalement pour réorganiser par priorité
+- **Glisser-déposer** verticalement (via la colonne Ordre ou les barres) pour réorganiser par priorité
 - **Couleurs dynamiques** :
   - 🟦 **Gris** = non démarré (0%)
   - 🟦 **Bleu** = en cours (0%–100%)
@@ -135,17 +152,24 @@ Avantages :
 **Bin-packing événementiel** avec priorités :
 1. Les projets sont traités par ordre de priorité
 2. À chaque libération de dev, on affecte des tâches
-3. Si les devs sont insuffisants pour un projet prioritaire, **la durée s'allonge proportionnellement**
-4. Cible : **100% d'utilisation des devs** en permanence
+3. Un projet ne démarre jamais avant sa **date de démarrage** (si renseignée), ni avant le démarrage d'un projet plus prioritaire
+4. Si les devs sont insuffisants pour un projet prioritaire, **la durée s'allonge** — calculée semaine par semaine
+5. Cible : **100% d'utilisation des devs** en permanence
+
+**Calcul de la durée allongée** (semaine par semaine) :
+- Budget total = `charge_restante × devs_requis` (en semaines-dev)
+- Chaque semaine, on consomme `min(devs libres, devs_requis)` de capacité — un projet ne peut pas absorber plus de devs que sa limite de parallélisation
+- Les devs occupés sur d'autres projets sont décomptés
+- La durée = la semaine où le budget est épuisé (comptage inclusif)
 
 **Exemple** :
-- Projet requiert 6 devs × 2 semaines = 12 semaines-dev
-- Seuls 3 devs disponibles
-- → Durée = 4 semaines (proportionnel)
+- Projet requiert 2 devs × 3 semaines = 6 semaines-dev
+- Seuls 1 dev disponible au départ, 1 autre se libère plus tard
+- → Durée recalculée selon la capacité réelle disponible chaque semaine (affichée `X→Y` dans la colonne Restant)
 
 ## 📋 Historique des features
 
-Pour voir les **9 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **14 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 

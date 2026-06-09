@@ -153,6 +153,70 @@
 
 ---
 
+## 10. Date de démarrage par projet (règle métier)
+
+**Demande :**
+> Rajoute une règle métier à la création d'un projet : la date de démarrage d'un projet. Normalement cette valeur restera vide, mais si cette valeur est remplie, on ne doit pas commencer ce projet avant la date précisée.
+
+**Features livrées :**
+- **Nouveau champ projet** `Date de démarrage` (optionnel) dans le formulaire de création/édition
+- Helper `dateToWeek(dateStr)` : convertit une date en numéro de semaine relatif au lundi de la `startDate`
+- Le scheduler calcule `minStartWeek` pour chaque projet → un projet ne démarre jamais avant sa date imposée
+
+---
+
+## 11. Ordre de démarrage respectant la priorité (parallélisation conservée)
+
+**Demande :**
+> Il faut être en capacité à paralléliser. Mais il ne faut pas commencer le projet N si le projet M (plus prioritaire que N) n'a pas commencé.
+
+**Features livrées :**
+- Garde-fou dans la boucle de scheduling : `currentWeek` respecte le `minStartWeek` du projet le plus prioritaire en attente avant d'affecter des devs
+- La parallélisation (bin-packing) est conservée : plusieurs projets tournent en parallèle si la capacité le permet, mais jamais un projet moins prioritaire avant le démarrage d'un plus prioritaire
+
+---
+
+## 12. Édition inline par colonne + suppression des poignées ⠿
+
+**Demande :**
+> Retire les 6 points à gauche des projets. Cliquer sur les colonnes édite directement la valeur (projet → renommer, P. → liste déroulante priorité, Devs → nb de devs, etc.). Les autres champs restent accessibles via l'icône crayon au survol.
+
+**Features livrées :**
+- Suppression de la poignée de drag ⠿ → remplacée par un **badge Ordre** (1→N) sticky et stylé
+- **Édition inline** au clic sur chaque colonne visible : `inlineEditName`, `inlineEditPriority`, `inlineEditDevs`, `inlineEditProgress` (clamp 0–100), `inlineEditBV` (0–1000 ou vide), `inlineEditDeadline`
+- Sauvegarde sur blur/Enter, annulation sur Escape
+- Le drag-to-reorder se fait via la colonne Ordre ou les barres ; le crayon ✎ (au survol) ouvre la modale complète
+- Suppression du mini-rectangle BV redondant dans la colonne Projet (colonne BV dédiée déjà présente)
+
+---
+
+## 13. Labels de zoom — priorité aux mois
+
+**Demande :**
+> En zoom 48px il faut privilégier les mois (jours seulement si ≥64px). En zoom 24px, afficher les mois même si ça déborde sur les lignes verticales.
+
+**Bug/amélioration livrée :**
+- Logique de labels revue : le mois est prioritaire et affiché en début de mois (`getDate() <= 7`)
+- Les jours ne s'affichent qu'à partir de 64px
+- En dessous de 28px, `overflow:visible` autorise l'écriture du mois par-dessus les lignes verticales
+
+---
+
+## 14. Calcul correct de la durée allongée (capacité semaine par semaine)
+
+**Demande (sur plusieurs itérations) :**
+> Le calcul des semaines restantes en cas de durée allongée est faux. Ne pas se baser sur les devs disponibles la 1ère semaine, mais accumuler la capacité semaine par semaine (capacité = X×N, on retire chaque semaine le travail fourni). Tenir compte des devs occupés sur d'autres projets. La durée réelle compte les semaines 0,1,2 = 3 semaines.
+
+**Features livrées :**
+- Helper `calculateProjectEndWeek(startWeek, devWeekBudget, devFreeAt, maxParallel)` : simulation semaine par semaine
+- Budget = `remainingWeeks × devsNeeded`
+- Chaque semaine, capacité ajoutée = `min(devs libres, devsNeeded)` — un projet ne peut absorber que `devsNeeded` devs par semaine (limite de parallélisation)
+- Les devs occupés sur d'autres projets sont décomptés via `devFreeAt`
+- Comptage inclusif des semaines (`+1`) : travailler sem 0,1,2 = 3 semaines
+- Colonne **Restant** affiche `X→Y` (restant initial → nouvelle valeur allongée)
+
+---
+
 ## Stack technique
 
 | Élément | Choix |
@@ -171,5 +235,8 @@
 ```
 C:\Users\jean-christophe.kour\planner\
 ├── index.html      ← application complète
-└── FEATURES.md     ← ce fichier
+├── README.md       ← documentation utilisateur
+└── FEATURES.md     ← ce fichier (historique des itérations)
 ```
+
+> ⚙️ **Convention** : à chaque développement ajouté, mettre à jour le README (`README.md`) et ajouter une itération à ce fichier.
