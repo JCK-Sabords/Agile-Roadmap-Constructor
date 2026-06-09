@@ -1,4 +1,4 @@
-# 🚀 Agile Roadmap Constructor
+# 🚀 Product Planner — Roadmap agile
 
 Une application de **planification de type Gantt** locale, simple et efficace pour visualiser et gérer vos projets en temps réel.
 
@@ -7,7 +7,8 @@ Une application de **planification de type Gantt** locale, simple et efficace po
 - 📊 **Gantt interactif** avec barres colorées et glisser-déposer vertical
 - 🎯 **Système de priorités** (P1-P4) avec codes couleur automatiques
 - 📅 **Gestion des deadlines** avec alertes en rouge + double ligne verticale sur la frise
-- 🗓️ **Date de démarrage** optionnelle par projet (un projet ne démarre jamais avant)
+- 🗓️ **Date de démarrage** optionnelle par projet (un projet ne démarre jamais avant) — visible dans la colonne Dates et sur la frise (ligne verte avec flèches)
+- ✏️ **Sous-titre produit éditable** dans la topbar (clique sur "· votre produit" pour personnaliser, persisté en localStorage)
 - 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs et parallélisation
 - ✏️ **Édition inline** — clic direct sur les colonnes (nom, priorité, devs, avancement, BV, deadline)
 - 📈 **Durée allongée précise** calculée semaine par semaine selon la capacité réelle
@@ -100,7 +101,7 @@ Pour les champs non visibles dans le tableau, survolez la ligne et cliquez sur l
 - **Scrollbar horizontale** : avancer/reculer dans les semaines
 - **Ligne rouge verticale** : date d'aujourd'hui
 - **Double ligne verticale rouge** : deadline d'un projet (visible même au-delà de la fin planifiée)
-- **Ligne verte pointillée** : date de démarrage obligatoire d'un projet
+- **Ligne verte pleine avec flèches** : date de démarrage obligatoire d'un projet (▶ haut et bas)
 - **Boutons − / +** : zoomer/dézoomer (7 niveaux)
 
 ### Exporter / Importer
@@ -171,7 +172,7 @@ Avantages :
 
 ## 📋 Historique des features
 
-Pour voir les **17 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **23 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 

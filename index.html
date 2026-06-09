@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product Planner — Gantt</title>
+<title>Product Planner — Roadmap agile</title>
 <style>
 :root {
   --bg: #f8fafc;
@@ -22,25 +22,25 @@
   --hdr-h: 42px;
   --week-w: 64px;
   /* sticky column widths */
-  --w-prio:   50px;   /* priority/order number */
-  --w-name:  210px;
-  --w-gp:     52px;   /* global priority badge */
-  --w-devs:   64px;
-  --w-prog:  110px;
-  --w-rem:    82px;
-  --w-bv:     56px;   /* business value */
-  --w-dates: 200px;
+  --w-prio:   30px;   /* priority/order number */
+  --w-name:   80px;
+  --w-gp:     46px;   /* global priority badge */
+  --w-devs:   54px;
+  --w-prog:   92px;
+  --w-rem:    72px;
+  --w-bv:     48px;   /* business value */
+  --w-dates: 135px;
 }
 /* sticky left offsets (cumulative) */
 :root {
   --l-prio:   0px;
-  --l-name:   50px;
-  --l-gp:    260px;
-  --l-devs:  312px;
-  --l-prog:  376px;
-  --l-rem:   486px;
-  --l-bv:    568px;
-  --l-dates: 624px;
+  --l-name:   30px;
+  --l-gp:    110px;
+  --l-devs:  156px;
+  --l-prog:  210px;
+  --l-rem:   302px;
+  --l-bv:    374px;
+  --l-dates: 422px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -61,6 +61,9 @@ body{
 }
 .topbar-logo{font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-.3px;margin-right:auto}
 .topbar-logo span{color:var(--text2);font-weight:400}
+#product-subtitle{outline:none;cursor:text;display:inline-block;min-width:90px;vertical-align:baseline}
+#product-subtitle:empty::before{content:attr(data-placeholder);opacity:.28}
+#product-subtitle:not(:focus):hover{box-shadow:0 1px 0 var(--border)}
 
 /* ── Config bar ── */
 .cfg-bar{
@@ -91,11 +94,13 @@ body{
 .btn-danger:hover{background:#fff5f5}
 .btn-sm{padding:4px 10px;font-size:12px}
 
-/* ── Gantt wrapper ── */
-.gantt-wrapper{flex:1;overflow-x:scroll;overflow-y:auto;position:relative}
+/* ── Gantt split layout ── */
+.gantt-outer{display:flex;flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+.gantt-frozen{flex-shrink:0;overflow:hidden;box-shadow:3px 0 8px rgba(0,0,0,.12);z-index:10;background:var(--surface)}
+.gantt-wrapper{flex:1;overflow-x:scroll;overflow-y:visible;position:relative}
 
 /* ── Table base ── */
-table{border-collapse:collapse;min-width:100%}
+table{border-collapse:separate;border-spacing:0;min-width:100%}
 
 thead th{
   position:sticky;top:0;z-index:15;
@@ -113,28 +118,17 @@ td{
   font-size:13px;padding:0 8px;vertical-align:middle;
 }
 
-/* ── Sticky columns ── */
-.st  {position:sticky;z-index:12;background:var(--surface)}
-.st-h{position:sticky;z-index:16;background:var(--surface)}
+/* ── Frozen columns (no sticky needed — separate panel) ── */
+.c-prio  {width:var(--w-prio); min-width:var(--w-prio); text-align:center; cursor:grab}
+.c-name  {width:var(--w-name);  min-width:var(--w-name)}
+.c-gp    {width:var(--w-gp);    min-width:var(--w-gp);  text-align:center}
+.c-devs  {width:var(--w-devs);  min-width:var(--w-devs);text-align:center}
+.c-prog  {width:var(--w-prog);  min-width:var(--w-prog)}
+.c-rem   {width:var(--w-rem);   min-width:var(--w-rem); text-align:center}
+.c-bv    {width:var(--w-bv);    min-width:var(--w-bv);  text-align:center}
+.c-dates {width:var(--w-dates); min-width:var(--w-dates)}
 
-.c-prio  {left:var(--l-prio); width:var(--w-prio); min-width:var(--w-prio); text-align:center; cursor:grab}
-.c-name  {left:var(--l-name);  width:var(--w-name);  min-width:var(--w-name)}
-.c-gp    {left:var(--l-gp);   width:var(--w-gp);    min-width:var(--w-gp);  text-align:center}
-.c-devs  {left:var(--l-devs); width:var(--w-devs);  min-width:var(--w-devs);text-align:center}
-.c-prog  {left:var(--l-prog); width:var(--w-prog);  min-width:var(--w-prog)}
-.c-rem   {left:var(--l-rem);  width:var(--w-rem);   min-width:var(--w-rem); text-align:center}
-.c-bv    {left:var(--l-bv);   width:var(--w-bv);    min-width:var(--w-bv);  text-align:center}
-.c-dates {left:var(--l-dates);width:var(--w-dates); min-width:var(--w-dates)}
-
-/* shadow after last sticky col */
-.c-dates::after{
-  content:'';position:absolute;top:0;right:-8px;
-  width:8px;height:100%;pointer-events:none;
-  background:linear-gradient(to right,rgba(0,0,0,.07),transparent);
-}
-
-/* hover highlight for sticky cells */
-tbody tr:hover .st{background:#f8f9ff}
+/* hover highlight */
 tbody tr:hover{background:#f8f9ff}
 
 /* ── Row ── */
@@ -291,13 +285,24 @@ tbody tr:hover .edit-btn{opacity:1}
   pointer-events:none;z-index:6;
 }
 
-/* start-date constraint line — dashed green */
+/* start-date constraint line — solid green with right-pointing arrows top & bottom */
 .startdate-line{
   position:absolute;top:0;bottom:0;
-  width:2px;
-  border-left:2px dashed #16a34a;
+  width:8px;
+  border-left:2px solid #16a34a;
   pointer-events:none;z-index:6;
 }
+.startdate-line::before,
+.startdate-line::after{
+  content:'';
+  position:absolute;
+  left:2px;
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
+  border-left:7px solid #16a34a;
+}
+.startdate-line::before{ top:3px; }
+.startdate-line::after { bottom:3px; }
 
 /* ── Empty state ── */
 .empty{padding:80px 20px;text-align:center;color:var(--text2)}
@@ -356,6 +361,8 @@ tbody tr:hover .edit-btn{opacity:1}
 .gantt-wrapper::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:5px}
 .gantt-wrapper::-webkit-scrollbar-thumb:hover{background:#64748b}
 .gantt-wrapper::-webkit-scrollbar-corner{background:var(--surface2)}
+.gantt-outer::-webkit-scrollbar{width:8px}
+.gantt-outer::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:5px}
 
 /* ── GP select colors ── */
 select#f-gp option[value=P1]{background:#fecdd3}
@@ -368,7 +375,7 @@ select#f-gp option[value=P4]{background:#ddd6fe}
 
 <!-- ── Topbar ── -->
 <div class="topbar">
-  <div class="topbar-logo">Product Planner <span>— Gantt</span></div>
+  <div class="topbar-logo">Product Planner <span>→ Roadmap agile <span id="product-subtitle" contenteditable="true" spellcheck="false" data-placeholder="· votre produit"></span></span></div>
 
   <!-- Export -->
   <button class="btn" onclick="exportData()" title="Exporter la planification en JSON">
@@ -409,16 +416,26 @@ select#f-gp option[value=P4]{background:#ddd6fe}
 </div>
 
 <!-- ── Gantt ── -->
-<div class="gantt-wrapper" id="gantt-wrapper">
-  <table id="gantt-table">
-    <thead id="gantt-head"></thead>
-    <tbody id="gantt-body"></tbody>
-  </table>
-  <div id="empty-state" class="empty hidden">
-    <div class="icon">📋</div>
-    <p>Aucun projet pour l'instant. Ajoutez votre premier projet pour démarrer la planification.</p>
-    <button class="btn btn-primary" onclick="openAddModal()">+ Ajouter un projet</button>
+<div class="gantt-outer">
+  <!-- Panneau gauche figé (colonnes projet) -->
+  <div class="gantt-frozen" id="gantt-frozen">
+    <table id="gantt-left-table">
+      <thead id="gantt-head-left"></thead>
+      <tbody id="gantt-body-left"></tbody>
+    </table>
   </div>
+  <!-- Panneau droit scrollable (frise chronologique) -->
+  <div class="gantt-wrapper" id="gantt-wrapper">
+    <table id="gantt-right-table">
+      <thead id="gantt-head-right"></thead>
+      <tbody id="gantt-body-right"></tbody>
+    </table>
+  </div>
+</div>
+<div id="empty-state" class="empty hidden">
+  <div class="icon">📋</div>
+  <p>Aucun projet pour l'instant. Ajoutez votre premier projet pour démarrer la planification.</p>
+  <button class="btn btn-primary" onclick="openAddModal()">+ Ajouter un projet</button>
 </div>
 
 <!-- ── Legend ── -->
@@ -884,13 +901,9 @@ function render() {
     ? `${count} projet${count>1?'s':''} · ${maxEnd} semaine${maxEnd>1?'s':''} de charge planifiée`
     : '';
 
-  if (!count) {
-    document.getElementById('gantt-table').style.display = 'none';
-    document.getElementById('empty-state').classList.remove('hidden');
-    return;
-  }
-  document.getElementById('gantt-table').style.display = '';
-  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('empty-state').classList.toggle('hidden', count > 0);
+  document.getElementById('gantt-frozen').style.display  = count ? '' : 'none';
+  if (!count) return;
 
   // Apply dynamic week width to CSS variable + update label
   document.documentElement.style.setProperty('--week-w', WEEK_PX() + 'px');
@@ -906,36 +919,33 @@ function render() {
   const sorted = [...projects].sort((a, b) => a.priority - b.priority);
 
   // ── Header ──
-  let htr = '<tr>'
-    + '<th class="c-prio   st-h" title="Ordre / Priorité">Ordre</th>'
-    + '<th class="c-name   st-h">Projet</th>'
-    + '<th class="c-gp     st-h" title="Priorité globale">P.</th>'
-    + '<th class="c-devs   st-h">Dévs</th>'
-    + '<th class="c-prog   st-h">Avancement</th>'
-    + '<th class="c-rem    st-h">Restant</th>'
-    + '<th class="c-bv     st-h" title="Business value">BV</th>'
-    + '<th class="c-dates  st-h">Dates / Deadline</th>';
+  const htrLeft = '<tr>'
+    + '<th class="c-prio" title="Ordre / Priorité">Ordre</th>'
+    + '<th class="c-name">Projet</th>'
+    + '<th class="c-gp" title="Priorité globale">P.</th>'
+    + '<th class="c-devs">Dévs</th>'
+    + '<th class="c-prog">Avancement</th>'
+    + '<th class="c-rem">Restant</th>'
+    + '<th class="c-bv" title="Business value">BV</th>'
+    + '<th class="c-dates">Dates / Deadline</th>'
+    + '</tr>';
 
   const wp = WEEK_PX();
+  let htrRight = '<tr>';
   for (let w = wStart; w < wEnd; w++) {
     const d = weekToDate(w);
-    // Label strategy: prioritize months over days
     let label;
     let overflowStyle = 'overflow:hidden;';
 
     if (wp >= 64) {
-      // >=64px: show day + month (both fit)
       label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
     } else if (wp >= 28) {
-      // 28-63px: show month only (day is optional)
-      // Only show month label at the start of each month to avoid redundancy
       if (d.getDate() <= 7) {
         label = d.toLocaleDateString('fr-FR', { month: 'short' });
       } else {
         label = '';
       }
     } else {
-      // <28px (24px zoom): show month always, allow overflow
       overflowStyle = 'overflow:visible;';
       if (d.getDate() <= 7) {
         label = d.toLocaleDateString('fr-FR', { month: 'short' });
@@ -948,14 +958,14 @@ function render() {
     if (w === tw)         cls += ' wk-today';
     if (d.getDate() <= 7) cls += ' wk-month-start';
     const line = w === tw ? '<div class="today-line"></div>' : '';
-    // Wrap in a fixed-width div with dynamic overflow handling
-    htr += `<th class="${cls}"><div style="width:${wp}px;${overflowStyle}white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
+    htrRight += `<th class="${cls}"><div style="width:${wp}px;${overflowStyle}white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
   }
-  htr += '</tr>';
-  document.getElementById('gantt-head').innerHTML = htr;
+  htrRight += '</tr>';
+  document.getElementById('gantt-head-left').innerHTML  = htrLeft;
+  document.getElementById('gantt-head-right').innerHTML = htrRight;
 
   // ── Body ──
-  let rows = '';
+  let rowsLeft = '', rowsRight = '';
 
   sorted.forEach((proj, idx) => {
     const s          = schedMap[proj.id];
@@ -993,6 +1003,11 @@ function render() {
       datesHtml = `<span style="color:var(--green)">✓ Complété</span>`;
     } else {
       datesHtml = `<b>${startD}</b> → <b>${endD}</b>`;
+      if (proj.startDate) {
+        const sdDispDate = new Date(proj.startDate + 'T00:00:00');
+        const sdDispStr  = sdDispDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
+        datesHtml += `<div class="deadline-row" style="color:#16a34a;font-weight:700">▶︎ dém : ${sdDispStr}</div>`;
+      }
       if (proj.deadline) {
         const dlDate = new Date(proj.deadline + 'T00:00:00');
         const dlStr  = dlDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
@@ -1074,22 +1089,22 @@ function render() {
       for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
     }
 
-    rows += `
+    rowsLeft += `
       <tr draggable="true" data-id="${proj.id}">
-        <td class="c-prio st" title="Glisser pour réordonner"><span class="prio-badge">${proj.priority}</span></td>
-        <td class="c-name st">
+        <td class="c-prio" title="Glisser pour réordonner"><span class="prio-badge">${proj.priority}</span></td>
+        <td class="c-name">
           <div class="cell-name">
             <span class="proj-name-text" title="${proj.name}" data-id="${proj.id}" onclick="inlineEditName(event)">${proj.name}</span>
             <button class="edit-btn" onclick="openEditModal(${proj.id})">✎</button>
           </div>
         </td>
-        <td class="c-gp st" style="text-align:center">
+        <td class="c-gp" style="text-align:center">
           <span class="gp-badge gp-${gp}" data-id="${proj.id}" onclick="inlineEditPriority(event)" style="cursor:pointer">${gp}</span>
         </td>
-        <td class="c-devs st" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}" data-id="${proj.id}" onclick="inlineEditDevs(event)">
+        <td class="c-devs" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}" data-id="${proj.id}" onclick="inlineEditDevs(event)">
           ${proj.devsNeeded}/${state.config.totalDevs}
         </td>
-        <td class="c-prog st" data-id="${proj.id}" onclick="inlineEditProgress(event)" style="text-align:center;cursor:pointer">
+        <td class="c-prog" data-id="${proj.id}" onclick="inlineEditProgress(event)" style="text-align:center;cursor:pointer">
           <div class="cell-prog">
             <div class="prog-inner">
               <div class="prog-label">${progPct}%</div>
@@ -1097,22 +1112,26 @@ function render() {
             </div>
           </div>
         </td>
-        <td class="c-rem st" style="text-align:center">${remChip}</td>
-        <td class="c-bv st" style="text-align:center" data-id="${proj.id}" onclick="inlineEditBV(event)">${bvHtml}</td>
-        <td class="c-dates st" data-id="${proj.id}" onclick="inlineEditDeadline(event)"><div class="dates-cell">${datesHtml}</div></td>
-        ${wkCells}
+        <td class="c-rem" style="text-align:center">${remChip}</td>
+        <td class="c-bv" style="text-align:center" data-id="${proj.id}" onclick="inlineEditBV(event)">${bvHtml}</td>
+        <td class="c-dates" data-id="${proj.id}" onclick="inlineEditDeadline(event)"><div class="dates-cell">${datesHtml}</div></td>
       </tr>`;
+
+    rowsRight += `<tr data-id="${proj.id}">${wkCells}</tr>`;
   });
 
-  document.getElementById('gantt-body').innerHTML = rows;
+  document.getElementById('gantt-body-left').innerHTML  = rowsLeft;
+  document.getElementById('gantt-body-right').innerHTML = rowsRight;
   bindDrag();
 
-  // Auto-scroll to today on first render
+  // Show/hide empty state
+  document.getElementById('empty-state').classList.toggle('hidden', count > 0);
+
+  // Auto-scroll to today on first render (right panel only, no stickyW offset)
   const wrap = document.getElementById('gantt-wrapper');
   if (!wrap._scrollInit) {
     wrap._scrollInit = true;
-    const stickyW  = 50 + 210 + 52 + 64 + 110 + 82 + 56 + 200;
-    const todayLeft = stickyW + PAST_WEEKS * WEEK_PX() - 2 * WEEK_PX();
+    const todayLeft = PAST_WEEKS * WEEK_PX() - 2 * WEEK_PX();
     wrap.scrollLeft = Math.max(0, todayLeft);
   }
 }
@@ -1546,7 +1565,8 @@ function reorderPriority(movedId, newPrio) {
 let dragId = null;
 
 function bindDrag() {
-  document.querySelectorAll('#gantt-body tr').forEach(row => {
+  // Drag events only on the frozen left panel rows
+  document.querySelectorAll('#gantt-body-left tr').forEach(row => {
     row.addEventListener('dragstart', onDragStart);
     row.addEventListener('dragover',  onDragOver);
     row.addEventListener('dragleave', onDragLeave);
@@ -1554,9 +1574,14 @@ function bindDrag() {
     row.addEventListener('dragend',   onDragEnd);
   });
 }
+// Mirror a class change to both left and right rows for a given project id
+function mirrorRowClass(id, cls, add) {
+  const sel = `#gantt-body-left tr[data-id="${id}"], #gantt-body-right tr[data-id="${id}"]`;
+  document.querySelectorAll(sel).forEach(r => r.classList[add ? 'add' : 'remove'](cls));
+}
 function onDragStart(e) {
   dragId = parseInt(this.dataset.id);
-  this.classList.add('dragging');
+  mirrorRowClass(dragId, 'dragging', true);
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', String(dragId));
 }
@@ -1586,7 +1611,7 @@ function onDrop(e) {
   saveState(); render();
 }
 function onDragEnd() {
-  document.querySelectorAll('#gantt-body tr')
+  document.querySelectorAll('#gantt-body-left tr, #gantt-body-right tr')
     .forEach(r => r.classList.remove('dragging','drag-over-top','drag-over-bottom'));
   dragId = null;
 }
@@ -1676,6 +1701,14 @@ function importData(event) {
 loadState();
 initConfig();
 render();
+
+// Editable product subtitle in topbar
+(function() {
+  const el = document.getElementById('product-subtitle');
+  el.textContent = localStorage.getItem('product-subtitle') || '';
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+  el.addEventListener('blur', () => { localStorage.setItem('product-subtitle', el.textContent.trim()); });
+})();
 </script>
 </body>
 </html>

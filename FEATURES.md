@@ -1,4 +1,4 @@
-# Product Planner — Gantt · Historique des features demandées
+# Product Planner — Roadmap agile · Historique des features demandées
 
 > Projet : application de planification Gantt locale (HTML/CSS/JS, stockage localStorage)
 > Fichier : `C:\Users\jean-christophe.kour\planner\index.html`
@@ -254,6 +254,90 @@
 - La ligne s'affiche à la position exacte du jour (pas seulement le lundi de la colonne)
 - Visible dans les cellules vides ET à l'intérieur de la barre si la contrainte tombe dans la plage du projet
 - `mkEmptyCell` accepte maintenant `sdWeek` et `sdDayOffset` en plus des paramètres deadline
+
+---
+
+## 18. Colonnes gauches figées (split-panel)
+
+**Demande :**
+> Toute la zone à gauche de la frise doit rester statique quand on utilise l'ascenseur horizontal.
+
+**Features livrées :**
+- Refonte structurelle en **split-panel** : deux tables côte à côte (`#gantt-left-table` dans `.gantt-frozen` + `#gantt-right-table` dans `.gantt-wrapper`)
+- `.gantt-frozen` : `overflow:hidden`, shadow droite, z-index 10 — jamais scrollé
+- `.gantt-wrapper` : `overflow-x:scroll` — seule partie qui bouge horizontalement
+- `render()` génère deux jeux de lignes synchronisés (`rowsLeft` / `rowsRight`) avec le même `data-id`
+- Drag-and-drop rebranché sur `#gantt-body-left` uniquement ; `mirrorRowClass()` propage les classes visuelles aux deux panels
+- Auto-scroll initial recalculé sans offset sticky
+
+---
+
+## 19. Date de démarrage dans la colonne Dates/Deadline
+
+**Demande :**
+> Si un projet a une date de démarrage définie, mieux visualiser cette date dans la colonne Dates/Deadline avec une émoji et mettre la date en vert gras.
+
+**Features livrées :**
+- Affichage `▶︎ dém : JJ mois AA` en **vert (#16a34a) et gras** dans la cellule Dates/Deadline
+- Style `.startdate-line` changé en **ligne pleine** avec pseudo-éléments `::before` / `::after` formant deux flèches droite (haut et bas de la ligne)
+- Emoji changé de 🟢 à ▶︎ (plus cohérent avec l'idée de démarrage)
+
+---
+
+## 20. Renommage de l'application
+
+**Demande :**
+> Change le nom de l'outil en "Product Planner - Roadmap agile".
+
+**Features livrées :**
+- Titre de l'onglet navigateur : `Product Planner — Roadmap agile`
+- Topbar logo mis à jour
+- README.md et FEATURES.md mis à jour en conséquence
+
+---
+
+## 21. Resserrement des colonnes gauches
+
+**Demande :**
+> Resserre les colonnes de la partie gauche pour laisser plus de place au graphe à droite.
+
+**Features livrées :**
+- Réduction de toutes les colonnes figées (total : 824 px → 557 px, soit −267 px libérés pour le Gantt) :
+  - Ordre : 50 → 30 px
+  - Projet : 210 → 80 px (tronquage `text-overflow:ellipsis`)
+  - GP : 52 → 46 px
+  - Devs : 64 → 54 px
+  - Prog : 110 → 92 px
+  - Restant : 82 → 72 px
+  - BV : 56 → 48 px
+  - Dates : 200 → 135 px
+- Offsets cumulatifs `--l-*` recalculés en conséquence
+
+---
+
+## 22. Sous-titre produit éditable dans la topbar
+
+**Demande :**
+> Ajoute un contenu modifiable par le user après "Roadmap agile", qui ait l'air écrit d'une traite avec le reste du titre.
+
+**Features livrées :**
+- Span `#product-subtitle` avec `contenteditable="true"` inséré après "Roadmap agile"
+- `display:inline-block; min-width:90px` pour garantir une zone cliquable même à vide
+- Placeholder `· votre produit` via CSS `::before` (opacité 0.28, disparaît dès qu'il y a du contenu)
+- Soulignement subtil au survol (`box-shadow`) pour signaler l'interactivité
+- Aucun outline au focus — police, couleur et poids identiques au reste du span → rendu seamless
+- Persisté en `localStorage` (clé `product-subtitle`), restauré au chargement
+- `Enter` déclenche `blur()` (pas de saut de ligne)
+
+---
+
+## 23. Séparateur flèche → dans la topbar
+
+**Demande :**
+> Entre "Product Planner" et "Roadmap agile", remplace le tiret par une flèche vers la droite.
+
+**Features livrées :**
+- Remplacement de `—` par `→` dans la topbar logo
 
 ---
 
