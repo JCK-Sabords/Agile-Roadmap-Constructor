@@ -6,7 +6,7 @@ Une application de **planification de type Gantt** locale, simple et efficace po
 
 - 📊 **Gantt interactif** avec barres colorées et glisser-déposer vertical
 - 🎯 **Système de priorités** (P1-P4) avec codes couleur automatiques
-- 📅 **Gestion des deadlines** avec alertes visuelles en rouge
+- 📅 **Gestion des deadlines** avec alertes en rouge + double ligne verticale sur la frise
 - 🗓️ **Date de démarrage** optionnelle par projet (un projet ne démarre jamais avant)
 - 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs et parallélisation
 - ✏️ **Édition inline** — clic direct sur les colonnes (nom, priorité, devs, avancement, BV, deadline)
@@ -99,6 +99,7 @@ Pour les champs non visibles dans le tableau, survolez la ligne et cliquez sur l
 - **← / →** : naviguer dans le temps
 - **Scrollbar horizontale** : avancer/reculer dans les semaines
 - **Ligne rouge verticale** : date d'aujourd'hui
+- **Double ligne verticale rouge** : deadline d'un projet (visible même au-delà de la fin planifiée)
 - **Boutons − / +** : zoomer/dézoomer (7 niveaux)
 
 ### Exporter / Importer
@@ -169,7 +170,7 @@ Avantages :
 
 ## 📋 Historique des features
 
-Pour voir les **14 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **15 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 

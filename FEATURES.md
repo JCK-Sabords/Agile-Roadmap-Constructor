@@ -217,6 +217,20 @@
 
 ---
 
+## 15. Deadline visible sur la frise chronologique (double ligne verticale)
+
+**Demande :**
+> Quand pour un projet nous avons une deadline donnée, il faut que cette deadline soit visible sur la frise chronologique, par exemple avec une double ligne verticale à la date.
+
+**Features livrées :**
+- Nouveau style `.deadline-line` : **double ligne verticale rouge** (bordures gauche + droite, 4px d'écart)
+- La deadline est calculée en semaine (`dlWeek`) puis dessinée dans la cellule correspondante de la frise
+- **Visible même hors de la barre** : si la deadline tombe après la fin planifiée du projet, la ligne apparaît dans une cellule vide de la frise (avant, ce repère blanc n'existait qu'à l'intérieur de la barre)
+- `mkEmptyCell(w, tw, dlWeek)` accepte la semaine de deadline pour injecter la ligne au bon endroit
+- À l'intérieur de la barre, l'ancien repère blanc (`deadline-flag`) est remplacé par la même double ligne rouge pour la cohérence
+
+---
+
 ## Stack technique
 
 | Élément | Choix |
