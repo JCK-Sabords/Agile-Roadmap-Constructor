@@ -1,0 +1,186 @@
+# 🚀 Agile Roadmap Constructor
+
+Une application de **planification de type Gantt** locale, simple et efficace pour visualiser et gérer vos projets en temps réel.
+
+## ✨ Caractéristiques principales
+
+- 📊 **Gantt interactif** avec barres colorées et glisser-déposer vertical
+- 🎯 **Système de priorités** (P1-P4) avec codes couleur automatiques
+- 📅 **Gestion des deadlines** avec alertes visuelles en rouge
+- 🔄 **Scheduling intelligent** avec 100% d'utilisation des développeurs
+- 🎨 **Zoom dynamique** (7 niveaux) pour explorer votre planning
+- 💾 **Persistance localStorage** — aucune base de données requise
+- 📤 **Export/Import JSON** pour sauvegarder et restaurer vos données
+- ⚡ **Validation stricte** des champs obligatoires
+- 🌐 **Aucune dépendance** — pur HTML/CSS/JavaScript
+
+## 🚀 Démarrage rapide
+
+### Option 1 : Directement dans votre navigateur (recommandé)
+
+```bash
+# 1. Cloner le repo
+git clone https://github.com/JCK-Sabords/Agile-Roadmap-Constructor.git
+cd Agile-Roadmap-Constructor
+
+# 2. Ouvrir dans votre navigateur
+# Sur Windows:
+start index.html
+
+# Sur Mac:
+open index.html
+
+# Sur Linux:
+xdg-open index.html
+```
+
+### Option 2 : Avec un serveur local
+
+```bash
+# 1. Cloner le repo
+git clone https://github.com/JCK-Sabords/Agile-Roadmap-Constructor.git
+cd Agile-Roadmap-Constructor
+
+# 2. Lancer le serveur (Node.js requis)
+npx serve -p 5555 .
+
+# 3. Ouvrir http://localhost:5555 dans votre navigateur
+```
+
+## 📖 Utilisation
+
+### Configuration initiale
+
+1. **Définir la date de départ** — par défaut, c'est aujourd'hui
+2. **Entrer le nombre de développeurs** dans l'équipe
+3. Tous les projets seront planifiés à partir de ces paramètres
+
+### Ajouter un projet
+
+Cliquez sur **+ Nouveau projet** et remplissez :
+
+- **Nom du projet** ⭐ (obligatoire)
+- **Charge totale** (semaines) ⭐ (obligatoire)
+- **Avancement actuel** (%)
+- **Développeurs nécessaires** ⭐ (obligatoire)
+- **Priorité globale** (P1–P4) ⭐ (obligatoire)
+- **Business Value** (optionnel)
+- **Deadline** (optionnel — affichée en rouge si dépassée)
+
+### Organiser vos projets
+
+- **Glisser-déposer** verticalement pour réorganiser par priorité
+- **Couleurs dynamiques** :
+  - 🟦 **Gris** = non démarré (0%)
+  - 🟦 **Bleu** = en cours (0%–100%)
+  - 🟩 **Vert** = fini (100%)
+  - 🔴 **Rouge** = hors deadline
+  - 🟨 **Ambre** = durée allongée (devs insuffisants)
+
+### Naviguer dans le planning
+
+- **← / →** : naviguer dans le temps
+- **Scrollbar horizontale** : avancer/reculer dans les semaines
+- **Ligne rouge verticale** : date d'aujourd'hui
+- **Boutons − / +** : zoomer/dézoomer (7 niveaux)
+
+### Exporter / Importer
+
+- **Exporter** : sauvegarde horodatée en JSON (format : `product-planner_YYYY-MM-DD_HHhMM.json`)
+- **Importer** : restaure un ancien snapshot avec confirmation
+
+## 🎨 Système de couleurs
+
+### Par état du projet
+
+| État | Couleur | Signification |
+|------|---------|---------------|
+| Non démarré | Gris | Progress = 0% |
+| En cours | Bleu | 0% < Progress < 100% |
+| Fini | Vert | Progress = 100% |
+| Hors deadline | Rouge | Fin prévue > deadline |
+| Scaled | Ambre | Durée allongée (devs insuffisants) |
+
+### Par priorité globale (P1–P4)
+
+Chaque état a une **nuance différente** selon la priorité :
+- **P1 (Critique)** → couleur très saturée
+- **P2 (Haute)** → couleur saturée
+- **P3 (Normale)** → couleur standard
+- **P4 (Basse)** → couleur plus pâle
+
+## 🔧 Architecture
+
+### Single-file design
+
+Tout est contenu dans **`index.html`** :
+- HTML (structure)
+- CSS (styling + responsive)
+- JavaScript (logique + localStorage)
+
+Avantages :
+- ✅ Aucun build step
+- ✅ Aucune dépendance externe
+- ✅ Portable partout
+- ✅ Versionnable facilement
+
+### Persistance
+
+- Données stockées dans `localStorage` avec clé `product-planner-v3`
+- Survit aux rechargements du navigateur
+- Aucune synchronisation cloud (vous contrôlez vos données)
+
+### Algorithme de scheduling
+
+**Bin-packing événementiel** avec priorités :
+1. Les projets sont traités par ordre de priorité
+2. À chaque libération de dev, on affecte des tâches
+3. Si les devs sont insuffisants pour un projet prioritaire, **la durée s'allonge proportionnellement**
+4. Cible : **100% d'utilisation des devs** en permanence
+
+**Exemple** :
+- Projet requiert 6 devs × 2 semaines = 12 semaines-dev
+- Seuls 3 devs disponibles
+- → Durée = 4 semaines (proportionnel)
+
+## 📋 Historique des features
+
+Pour voir les **9 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+
+## 📱 Navigateurs supportés
+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Brave, Opera, etc. (tout navigateur moderne)
+
+## 💡 Conseils d'utilisation
+
+1. **Exportez régulièrement** vos données pour en garder une sauvegarde
+2. **Utilisez les priorités P1–P4** pour vraiment optimiser votre planning
+3. **Ajustez les deadlines** pour voir immédiatement l'impact sur le Gantt
+4. **Zoom out** pour avoir une vue d'ensemble, **zoom in** pour les détails
+
+## 🛠️ Développement local
+
+Si vous voulez modifier le code :
+
+```bash
+# Lancez le serveur avec auto-reload (via npx serve)
+npx serve -p 5555 .
+
+# Éditez index.html dans votre éditeur préféré
+# Le navigateur se recharge automatiquement (si vous activez l'auto-refresh)
+```
+
+Toutes les modifications sont immédiatement visibles. Pas de compilation requise !
+
+## 📄 Licence
+
+MIT — utilisez, modifiez et partagez librement.
+
+---
+
+**Fait avec ❤️ pour les PM et les équipes agiles.**
+
+Questions ? Consultez [`FEATURES.md`](./FEATURES.md) pour plus de détails techniques.
