@@ -22,7 +22,7 @@
   --hdr-h: 42px;
   --week-w: 64px;
   /* sticky column widths */
-  --w-handle: 36px;
+  --w-prio:   50px;   /* priority/order number */
   --w-name:  210px;
   --w-gp:     52px;   /* global priority badge */
   --w-devs:   64px;
@@ -33,14 +33,14 @@
 }
 /* sticky left offsets (cumulative) */
 :root {
-  --l-handle: 0px;
-  --l-name:   36px;
-  --l-gp:    246px;
-  --l-devs:  298px;
-  --l-prog:  362px;
-  --l-rem:   472px;
-  --l-bv:    554px;
-  --l-dates: 610px;
+  --l-prio:   0px;
+  --l-name:   50px;
+  --l-gp:    260px;
+  --l-devs:  312px;
+  --l-prog:  376px;
+  --l-rem:   486px;
+  --l-bv:    568px;
+  --l-dates: 624px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -117,7 +117,7 @@ td{
 .st  {position:sticky;z-index:12;background:var(--surface)}
 .st-h{position:sticky;z-index:16;background:var(--surface)}
 
-.c-handle{left:var(--l-handle);width:var(--w-handle);min-width:var(--w-handle)}
+.c-prio  {left:var(--l-prio); width:var(--w-prio); min-width:var(--w-prio); text-align:center; cursor:grab}
 .c-name  {left:var(--l-name);  width:var(--w-name);  min-width:var(--w-name)}
 .c-gp    {left:var(--l-gp);   width:var(--w-gp);    min-width:var(--w-gp);  text-align:center}
 .c-devs  {left:var(--l-devs); width:var(--w-devs);  min-width:var(--w-devs);text-align:center}
@@ -143,9 +143,8 @@ tbody tr.dragging{opacity:.35;cursor:grabbing}
 tbody tr.drag-over-top   {box-shadow:inset 0 2px 0 0 var(--accent)}
 tbody tr.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--accent)}
 
-/* ── Drag handle ── */
-.handle{color:#cbd5e1;font-size:16px;padding:0;text-align:center;cursor:grab;user-select:none}
-.handle:active{cursor:grabbing}
+/* ── Drag on priority column ── */
+.c-prio:active{cursor:grabbing}
 
 /* ── Scheduling priority badge (position in queue) ── */
 .prio{
@@ -160,7 +159,9 @@ tbody tr.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--accent)}
   display:inline-flex;align-items:center;justify-content:center;
   width:36px;height:22px;border-radius:6px;
   font-size:11px;font-weight:800;letter-spacing:.02em;
+  transition:transform .1s;
 }
+.gp-badge:hover{transform:scale(1.05)}
 .gp-P1{background:#fecdd3;color:#9f1239}
 .gp-P2{background:#fed7aa;color:#9a3412}
 .gp-P3{background:#bfdbfe;color:#1e40af}
@@ -168,7 +169,8 @@ tbody tr.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--accent)}
 
 /* ── Name cell ── */
 .cell-name{display:flex;align-items:center;padding:0 6px;gap:0;min-width:0}
-.proj-name-text{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 4px}
+.proj-name-text{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 4px;cursor:text;transition:color .1s}
+.proj-name-text:hover{color:var(--accent)}
 .bv-inline{font-size:10px;color:var(--text2);font-weight:600;white-space:nowrap;
   background:var(--surface2);padding:1px 5px;border-radius:4px;margin-right:4px;flex-shrink:0}
 .edit-btn{
@@ -468,7 +470,7 @@ select#f-gp option[value=P4]{background:#ddd6fe}
     Durée allongée
   </div>
 
-  <div style="margin-left:auto;color:var(--text2)">⠿ glisser pour priorité · ← → naviguer dans le temps</div>
+  <div style="margin-left:auto;color:var(--text2)">Glisser la colonne ordre pour réordonner · ← → naviguer dans le temps</div>
 </div>
 
 <!-- ── Modal ── -->
@@ -520,10 +522,17 @@ select#f-gp option[value=P4]{background:#ddd6fe}
         <div class="form-hint">Valeur métier (optionnel)</div>
       </div>
     </div>
-    <div class="form-group">
-      <label>Date limite de livraison (deadline)</label>
-      <input type="date" id="f-deadline">
-      <div class="form-hint">Si la fin planifiée dépasse cette date, la barre passe en rouge</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date de démarrage</label>
+        <input type="date" id="f-start-date">
+        <div class="form-hint">Le projet ne commence pas avant cette date</div>
+      </div>
+      <div class="form-group">
+        <label>Date limite de livraison (deadline)</label>
+        <input type="date" id="f-deadline">
+        <div class="form-hint">Si la fin planifiée dépasse cette date, la barre passe en rouge</div>
+      </div>
     </div>
 
     <div class="modal-section hidden" id="f-prio-section">Ordre dans la file</div>
@@ -648,6 +657,13 @@ function weekToDate(w) {
   base.setDate(base.getDate() + w * 7);
   return base;
 }
+function dateToWeek(dateStr) {
+  const base = getMondayOf(state.config.startDate);
+  const date = new Date(dateStr + 'T00:00:00');
+  base.setHours(0,0,0,0);
+  date.setHours(0,0,0,0);
+  return Math.floor((date - base) / (7 * 24 * 3600 * 1000));
+}
 function formatDate(d) {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
@@ -682,7 +698,8 @@ function schedule() {
 
   const result = projects.map(p => {
     const rem = Math.max(0, Math.ceil(p.totalWeeks * (1 - p.progress / 100)));
-    return { ...p, startWeek: null, endWeek: null, remainingWeeks: rem, scaled: false };
+    const minStartWeek = p.startDate ? dateToWeek(p.startDate) : 0;
+    return { ...p, startWeek: null, endWeek: null, remainingWeeks: rem, scaled: false, minStartWeek };
   });
 
   result.forEach(p => { if (p.remainingWeeks === 0) { p.startWeek = 0; p.endWeek = 0; } });
@@ -694,6 +711,12 @@ function schedule() {
   let currentWeek = 0, safety = 0;
 
   while (pending.length > 0 && safety++ < 200000) {
+    // RULE: Don't start project N if project M (more prioritary) hasn't started yet
+    // Ensure currentWeek respects the minStartWeek of the top-priority project
+    if (pending.length > 0 && currentWeek < pending[0].minStartWeek) {
+      currentWeek = pending[0].minStartWeek;
+    }
+
     const freeNow = devFreeAt
       .map((v, i) => [v, i])
       .filter(([v]) => v <= currentWeek)
@@ -815,7 +838,7 @@ function render() {
 
   // ── Header ──
   let htr = '<tr>'
-    + '<th class="c-handle st-h" title="Ordre">⠿</th>'
+    + '<th class="c-prio   st-h" title="Ordre / Priorité">Ordre</th>'
     + '<th class="c-name   st-h">Projet</th>'
     + '<th class="c-gp     st-h" title="Priorité globale">P.</th>'
     + '<th class="c-devs   st-h">Dévs</th>'
@@ -947,19 +970,18 @@ function render() {
 
     rows += `
       <tr draggable="true" data-id="${proj.id}">
-        <td class="c-handle st handle" title="Glisser pour réordonner">⠿</td>
+        <td class="c-prio st" title="Glisser pour réordonner">${proj.priority}</td>
         <td class="c-name st">
           <div class="cell-name">
-            <span class="prio">${proj.priority}</span>
-            <span class="proj-name-text" title="${proj.name}">${proj.name}</span>
+            <span class="proj-name-text" title="${proj.name}" data-id="${proj.id}" onclick="inlineEditName(event)">${proj.name}</span>
             ${proj.businessValue !== null && proj.businessValue !== '' ? `<span class="bv-inline">BV:${proj.businessValue}</span>` : ''}
             <button class="edit-btn" onclick="openEditModal(${proj.id})">✎</button>
           </div>
         </td>
         <td class="c-gp st" style="text-align:center">
-          <span class="gp-badge gp-${gp}">${gp}</span>
+          <span class="gp-badge gp-${gp}" data-id="${proj.id}" onclick="inlineEditPriority(event)" style="cursor:pointer">${gp}</span>
         </td>
-        <td class="c-devs st" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}">
+        <td class="c-devs st" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}" data-id="${proj.id}" onclick="inlineEditDevs(event)">
           ${proj.devsNeeded}/${state.config.totalDevs}
         </td>
         <td class="c-prog st">
@@ -984,7 +1006,7 @@ function render() {
   const wrap = document.getElementById('gantt-wrapper');
   if (!wrap._scrollInit) {
     wrap._scrollInit = true;
-    const stickyW  = 36 + 210 + 52 + 64 + 110 + 82 + 56 + 200;
+    const stickyW  = 50 + 210 + 52 + 64 + 110 + 82 + 56 + 200;
     const todayLeft = stickyW + PAST_WEEKS * WEEK_PX() - 2 * WEEK_PX();
     wrap.scrollLeft = Math.max(0, todayLeft);
   }
@@ -1013,6 +1035,7 @@ function openAddModal() {
   document.getElementById('f-devs').value     = '';
   document.getElementById('f-gp').value       = '';
   document.getElementById('f-bv').value       = '';
+  document.getElementById('f-start-date').value = '';
   document.getElementById('f-deadline').value = '';
   document.getElementById('f-prio').value     = '';
   document.getElementById('f-prio-group').classList.add('hidden');
@@ -1033,6 +1056,7 @@ function openEditModal(id) {
   document.getElementById('f-devs').value     = proj.devsNeeded;
   document.getElementById('f-gp').value       = proj.globalPriority || '';
   document.getElementById('f-bv').value       = proj.businessValue !== null ? proj.businessValue : '';
+  document.getElementById('f-start-date').value = proj.startDate || '';
   document.getElementById('f-deadline').value = proj.deadline || '';
   document.getElementById('f-prio').value     = proj.priority;
   document.getElementById('f-prio-group').classList.remove('hidden');
@@ -1085,6 +1109,7 @@ function saveProject() {
   const gp       = document.getElementById('f-gp').value || null;
   const bvRaw    = document.getElementById('f-bv').value;
   const bv       = bvRaw !== '' ? parseFloat(bvRaw) : null;
+  const startDate = document.getElementById('f-start-date').value || null;
   const deadline = document.getElementById('f-deadline').value || null;
   const prioRaw  = document.getElementById('f-prio').value;
   const id       = document.getElementById('f-id').value;
@@ -1121,11 +1146,11 @@ function saveProject() {
     const newPrio = prioRaw ? Math.min(maxPrio, Math.max(1, parseInt(prioRaw))) : proj.priority;
     if (newPrio !== proj.priority) reorderPriority(existingId, newPrio);
     Object.assign(proj, { name, totalWeeks: weeks, progress, devsNeeded: devs,
-      globalPriority: gp, businessValue: bv, deadline, priority: newPrio });
+      globalPriority: gp, businessValue: bv, startDate, deadline, priority: newPrio });
   } else {
     state.projects.push({
       id: state.nextId++, name, totalWeeks: weeks, progress, devsNeeded: devs,
-      globalPriority: gp, businessValue: bv, deadline,
+      globalPriority: gp, businessValue: bv, startDate, deadline,
       priority: state.projects.length + 1
     });
   }
@@ -1139,6 +1164,133 @@ function deleteProject() {
   state.projects = state.projects.filter(p => p.id !== id);
   normalizePriorities();
   saveState(); closeModal(); render();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Inline editing
+// ─────────────────────────────────────────────────────────────
+function inlineEditName(e) {
+  e.stopPropagation();
+  const span = e.target;
+  const id = parseInt(span.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = proj.name;
+  input.style.width = '100%';
+  input.style.padding = '4px';
+  input.style.border = '2px solid var(--accent)';
+  input.style.borderRadius = '4px';
+  input.style.fontFamily = 'inherit';
+  input.style.fontSize = '13px';
+
+  const onSave = () => {
+    const newName = input.value.trim();
+    if (newName && newName !== proj.name) {
+      proj.name = newName;
+      saveState();
+    }
+    render();
+  };
+
+  input.addEventListener('blur', onSave);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') onSave();
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function inlineEditPriority(e) {
+  e.stopPropagation();
+  const span = e.target;
+  const id = parseInt(span.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const select = document.createElement('select');
+  select.style.padding = '4px';
+  select.style.border = '2px solid var(--accent)';
+  select.style.borderRadius = '4px';
+  select.style.fontFamily = 'inherit';
+  select.style.fontSize = '13px';
+  select.style.fontWeight = '600';
+
+  ['P1', 'P2', 'P3', 'P4'].forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    opt.selected = (p === proj.globalPriority);
+    select.appendChild(opt);
+  });
+
+  const onSave = () => {
+    const newGp = select.value;
+    if (newGp !== proj.globalPriority) {
+      proj.globalPriority = newGp;
+      saveState();
+    }
+    render();
+  };
+
+  select.addEventListener('blur', onSave);
+  select.addEventListener('change', onSave);
+  select.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  span.replaceWith(select);
+  select.focus();
+}
+
+function inlineEditDevs(e) {
+  e.stopPropagation();
+  const td = e.currentTarget;
+  const id = parseInt(td.dataset.id);
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '20';
+  input.value = proj.devsNeeded;
+  input.style.width = '100%';
+  input.style.padding = '4px';
+  input.style.border = '2px solid var(--accent)';
+  input.style.borderRadius = '4px';
+  input.style.fontFamily = 'inherit';
+  input.style.fontSize = '13px';
+  input.style.fontWeight = '600';
+  input.style.textAlign = 'center';
+
+  const onSave = () => {
+    const newDevs = parseInt(input.value);
+    if (newDevs >= 1 && newDevs <= 20 && newDevs !== proj.devsNeeded) {
+      proj.devsNeeded = newDevs;
+      saveState();
+    }
+    render();
+  };
+
+  input.addEventListener('blur', onSave);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') onSave();
+    if (ev.key === 'Escape') render();
+    ev.stopPropagation();
+  });
+
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
 }
 
 // ─────────────────────────────────────────────────────────────
