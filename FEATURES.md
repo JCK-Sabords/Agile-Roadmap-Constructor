@@ -243,6 +243,20 @@
 
 ---
 
+## 17. Date de démarrage visible sur la frise chronologique
+
+**Demande :**
+> Si une date de démarrage obligatoire est définie pour un projet, la rendre visible sur la frise sur la ligne du projet concerné.
+
+**Features livrées :**
+- Nouveau style `.startdate-line` : **ligne verticale verte pointillée** (2px dashed #16a34a), visuellement distincte de la deadline rouge
+- Calcul de `sdWeek` et `sdDayOffset` (même logique que la deadline : `dateToWeek` + offset sub-semaine)
+- La ligne s'affiche à la position exacte du jour (pas seulement le lundi de la colonne)
+- Visible dans les cellules vides ET à l'intérieur de la barre si la contrainte tombe dans la plage du projet
+- `mkEmptyCell` accepte maintenant `sdWeek` et `sdDayOffset` en plus des paramètres deadline
+
+---
+
 ## Stack technique
 
 | Élément | Choix |

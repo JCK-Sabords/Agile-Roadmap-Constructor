@@ -291,6 +291,14 @@ tbody tr:hover .edit-btn{opacity:1}
   pointer-events:none;z-index:6;
 }
 
+/* start-date constraint line — dashed green */
+.startdate-line{
+  position:absolute;top:0;bottom:0;
+  width:2px;
+  border-left:2px dashed #16a34a;
+  pointer-events:none;z-index:6;
+}
+
 /* ── Empty state ── */
 .empty{padding:80px 20px;text-align:center;color:var(--text2)}
 .empty .icon{font-size:52px;margin-bottom:16px}
@@ -1003,13 +1011,19 @@ function render() {
     let wkCells = '';
 
     // Deadline week + sub-week day offset (0=Mon … 6=Sun)
-    // so the line aligns to the exact day, not just the Monday of the week
     let dlWeek = null, dlDayOffset = 0;
     if (proj.deadline) {
       dlWeek = dateToWeek(proj.deadline);
       const dlDate = new Date(proj.deadline + 'T00:00:00');
-      // getDay(): 0=Sun,1=Mon,…,6=Sat → convert to Mon=0 … Sun=6
       dlDayOffset = (dlDate.getDay() + 6) % 7;
+    }
+
+    // Start-date constraint week + day offset
+    let sdWeek = null, sdDayOffset = 0;
+    if (proj.startDate) {
+      sdWeek = dateToWeek(proj.startDate);
+      const sdDate = new Date(proj.startDate + 'T00:00:00');
+      sdDayOffset = (sdDate.getDay() + 6) % 7;
     }
 
     if (!isDone && s && s.startWeek !== null && s.startWeek < wEnd) {
@@ -1017,7 +1031,7 @@ function render() {
       const barEnd   = Math.min(s.endWeek, wEnd);
       const barSpan  = barEnd - barStart;
 
-      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
+      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
 
       // barW unused — bar now uses left/right instead of explicit px width
       const fillW  = Math.round(progPct);
@@ -1038,6 +1052,11 @@ function render() {
         const dlX = (dlWeek - barStart) * WEEK_PX() + dlDayOffset * WEEK_PX() / 7;
         dlFlag = `<div class="deadline-line" style="left:${dlX}px" title="Deadline"></div>`;
       }
+      // Start-date constraint line inside bar (if it falls within the bar span)
+      if (sdWeek !== null && sdWeek >= barStart && sdWeek < barEnd) {
+        const sdX = (sdWeek - barStart) * WEEK_PX() + sdDayOffset * WEEK_PX() / 7;
+        dlFlag += `<div class="startdate-line" style="left:${sdX}px" title="Date de démarrage"></div>`;
+      }
 
       let barCls = 'bar-cell';
       if (tw >= barStart && tw < barEnd) barCls += ' wk-today-col';
@@ -1050,9 +1069,9 @@ function render() {
         </div>
       </td>`;
 
-      for (let w = barEnd; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
+      for (let w = barEnd; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
     } else {
-      for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
+      for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset);
     }
 
     rows += `
@@ -1098,7 +1117,7 @@ function render() {
   }
 }
 
-function mkEmptyCell(w, tw, dlWeek, dlDayOffset) {
+function mkEmptyCell(w, tw, dlWeek, dlDayOffset, sdWeek, sdDayOffset) {
   const wp  = WEEK_PX();
   let cls = 'wk-cell';
   if (w === tw)                     cls += ' wk-today-col';
@@ -1107,9 +1126,9 @@ function mkEmptyCell(w, tw, dlWeek, dlDayOffset) {
   const todayLine = w === tw ? '<div class="today-line"></div>' : '';
   const dlLine    = (dlWeek != null && w === dlWeek)
     ? `<div class="deadline-line" style="left:${(dlDayOffset||0)*wp/7}px" title="Deadline"></div>` : '';
-  // Explicit inline width is mandatory: CSS variables alone are unreliable
-  // across zoom changes and table reflow cycles.
-  return `<td class="${cls}" style="width:${wp}px;min-width:${wp}px;max-width:${wp}px">${todayLine}${dlLine}</td>`;
+  const sdLine    = (sdWeek != null && w === sdWeek)
+    ? `<div class="startdate-line" style="left:${(sdDayOffset||0)*wp/7}px" title="Date de démarrage"></div>` : '';
+  return `<td class="${cls}" style="width:${wp}px;min-width:${wp}px;max-width:${wp}px">${todayLine}${dlLine}${sdLine}</td>`;
 }
 
 // ─────────────────────────────────────────────────────────────

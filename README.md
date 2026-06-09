@@ -100,6 +100,7 @@ Pour les champs non visibles dans le tableau, survolez la ligne et cliquez sur l
 - **Scrollbar horizontale** : avancer/reculer dans les semaines
 - **Ligne rouge verticale** : date d'aujourd'hui
 - **Double ligne verticale rouge** : deadline d'un projet (visible même au-delà de la fin planifiée)
+- **Ligne verte pointillée** : date de démarrage obligatoire d'un projet
 - **Boutons − / +** : zoomer/dézoomer (7 niveaux)
 
 ### Exporter / Importer
@@ -170,7 +171,7 @@ Avantages :
 
 ## 📋 Historique des features
 
-Pour voir les **16 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **17 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 
