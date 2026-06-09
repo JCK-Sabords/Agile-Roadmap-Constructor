@@ -113,11 +113,11 @@ Pour les champs non visibles dans le tableau, survolez la ligne et cliquez sur l
 
 | État | Couleur | Signification |
 |------|---------|---------------|
+| Hors deadline | Rouge | Fin prévue > deadline — **priorité absolue** |
+| Durée allongée | Ambre | Devs insuffisants (scaled) |
 | Non démarré | Gris | Progress = 0% |
 | En cours | Bleu | 0% < Progress < 100% |
 | Fini | Vert | Progress = 100% |
-| Hors deadline | Rouge | Fin prévue > deadline |
-| Scaled | Ambre | Durée allongée (devs insuffisants) |
 
 ### Par priorité globale (P1–P4)
 
@@ -170,7 +170,7 @@ Avantages :
 
 ## 📋 Historique des features
 
-Pour voir les **15 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
+Pour voir les **16 itérations** de développement, consultez [`FEATURES.md`](./FEATURES.md).
 
 ## 📱 Navigateurs supportés
 

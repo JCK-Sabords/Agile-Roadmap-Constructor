@@ -231,6 +231,18 @@
 
 ---
 
+## 16. Rouge prioritaire sur toute autre couleur en cas de dépassement de deadline
+
+**Demande :**
+> Si un projet dépasse une deadline, il faut que le projet soit en rouge. Même s'il y a allongement de durée ou toute autre raison. Le rouge est prioritaire.
+
+**Fix livré :**
+- Dans `getBarGradient`, l'évaluation "hors deadline → rouge" passe **en premier**, avant la détection "durée allongée → ambre"
+- Un projet scaled ET hors deadline est rouge (pas ambre)
+- Ordre final : 1) Hors deadline → rouge · 2) Scaled → ambre · 3) Fini → vert · 4) Non démarré → gris · 5) En cours → couleur par priorité
+
+---
+
 ## Stack technique
 
 | Élément | Choix |

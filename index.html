@@ -837,21 +837,21 @@ function schedule() {
 
 // ─────────────────────────────────────────────────────────────
 //  Bar gradient logic
-//  Priority: 1) late (end > deadline)  2) scaled (proportional)
-//            3) not started (0%)       4) in progress by globalPriority
+//  Priority: 1) late (end > deadline) — absolu
+//            2) scaled (proportional)  3) not started (0%)  4) in progress
 // ─────────────────────────────────────────────────────────────
 function getBarGradient(proj, endWeek) {
   const priority = proj.globalPriority || 'P3';
 
-  // 1) Durée allongée (scaled) — surpasse tout
-  if (proj.scaled) return GRAD.scaled;
-
-  // 2) Hors deadline (late) — RED
+  // 1) Hors deadline (late) — RED, priorité absolue
   if (proj.deadline) {
     const endDate      = weekToDate(endWeek);
     const deadlineDate = new Date(proj.deadline + 'T00:00:00');
     if (endDate > deadlineDate) return GRAD[`late${priority}`];
   }
+
+  // 2) Durée allongée (scaled) — ambre
+  if (proj.scaled) return GRAD.scaled;
 
   // 3) Fini (100%) — GREEN
   if (proj.progress >= 100) return GRAD[`done${priority}`];
