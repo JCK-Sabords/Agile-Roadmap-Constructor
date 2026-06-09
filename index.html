@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Planner — Gantt</title>
+<style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #64748b;
+  --accent: #6366f1;
+  --accent-d: #4f46e5;
+  --accent-light: #eef2ff;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --row-h: 52px;
+  --hdr-h: 42px;
+  --week-w: 64px;
+  /* sticky column widths */
+  --w-handle: 36px;
+  --w-name:  210px;
+  --w-gp:     52px;   /* global priority badge */
+  --w-devs:   64px;
+  --w-prog:  110px;
+  --w-rem:    82px;
+  --w-bv:     56px;   /* business value */
+  --w-dates: 200px;
+}
+/* sticky left offsets (cumulative) */
+:root {
+  --l-handle: 0px;
+  --l-name:   36px;
+  --l-gp:    246px;
+  --l-devs:  298px;
+  --l-prog:  362px;
+  --l-rem:   472px;
+  --l-bv:    554px;
+  --l-dates: 610px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+.hidden{display:none!important}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--text);
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* ── Topbar ── */
+.topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px;height:54px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;z-index:20;
+}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-.3px;margin-right:auto}
+.topbar-logo span{color:var(--text2);font-weight:400}
+
+/* ── Config bar ── */
+.cfg-bar{
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  padding:8px 20px;background:var(--accent-light);
+  border-bottom:1px solid #c7d2fe;flex-shrink:0;font-size:13px;
+}
+.cfg-bar label{color:var(--text2);font-weight:500;display:flex;align-items:center;gap:6px}
+.cfg-bar input[type=date],.cfg-bar input[type=number]{
+  padding:4px 9px;border:1px solid #c7d2fe;border-radius:7px;
+  font-size:13px;background:#fff;color:var(--text);width:auto;
+}
+.cfg-bar input[type=number]{width:64px}
+.cfg-sep{flex:1}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-size:13px;font-weight:500;
+  cursor:pointer;transition:background .12s;white-space:nowrap;
+}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-d)}
+.btn-danger{color:var(--red);border-color:#fecaca}
+.btn-danger:hover{background:#fff5f5}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── Gantt wrapper ── */
+.gantt-wrapper{flex:1;overflow-x:scroll;overflow-y:auto;position:relative}
+
+/* ── Table base ── */
+table{border-collapse:collapse;min-width:100%}
+
+thead th{
+  position:sticky;top:0;z-index:15;
+  background:var(--surface);
+  height:var(--hdr-h);
+  border-bottom:2px solid var(--border);
+  border-right:1px solid var(--border);
+  font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;
+  color:var(--text2);padding:0 8px;
+}
+td{
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  font-size:13px;padding:0 8px;vertical-align:middle;
+}
+
+/* ── Sticky columns ── */
+.st  {position:sticky;z-index:12;background:var(--surface)}
+.st-h{position:sticky;z-index:16;background:var(--surface)}
+
+.c-handle{left:var(--l-handle);width:var(--w-handle);min-width:var(--w-handle)}
+.c-name  {left:var(--l-name);  width:var(--w-name);  min-width:var(--w-name)}
+.c-gp    {left:var(--l-gp);   width:var(--w-gp);    min-width:var(--w-gp);  text-align:center}
+.c-devs  {left:var(--l-devs); width:var(--w-devs);  min-width:var(--w-devs);text-align:center}
+.c-prog  {left:var(--l-prog); width:var(--w-prog);  min-width:var(--w-prog)}
+.c-rem   {left:var(--l-rem);  width:var(--w-rem);   min-width:var(--w-rem); text-align:center}
+.c-bv    {left:var(--l-bv);   width:var(--w-bv);    min-width:var(--w-bv);  text-align:center}
+.c-dates {left:var(--l-dates);width:var(--w-dates); min-width:var(--w-dates)}
+
+/* shadow after last sticky col */
+.c-dates::after{
+  content:'';position:absolute;top:0;right:-8px;
+  width:8px;height:100%;pointer-events:none;
+  background:linear-gradient(to right,rgba(0,0,0,.07),transparent);
+}
+
+/* hover highlight for sticky cells */
+tbody tr:hover .st{background:#f8f9ff}
+tbody tr:hover{background:#f8f9ff}
+
+/* ── Row ── */
+tbody tr{height:var(--row-h);transition:background .1s;cursor:grab}
+tbody tr.dragging{opacity:.35;cursor:grabbing}
+tbody tr.drag-over-top   {box-shadow:inset 0 2px 0 0 var(--accent)}
+tbody tr.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--accent)}
+
+/* ── Drag handle ── */
+.handle{color:#cbd5e1;font-size:16px;padding:0;text-align:center;cursor:grab;user-select:none}
+.handle:active{cursor:grabbing}
+
+/* ── Scheduling priority badge (position in queue) ── */
+.prio{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:4px;
+  background:var(--accent);color:#fff;
+  font-size:10px;font-weight:800;margin-right:5px;flex-shrink:0;
+}
+
+/* ── Global priority badges (P1-P4) ── */
+.gp-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:22px;border-radius:6px;
+  font-size:11px;font-weight:800;letter-spacing:.02em;
+}
+.gp-P1{background:#fecdd3;color:#9f1239}
+.gp-P2{background:#fed7aa;color:#9a3412}
+.gp-P3{background:#bfdbfe;color:#1e40af}
+.gp-P4{background:#ddd6fe;color:#5b21b6}
+
+/* ── Name cell ── */
+.cell-name{display:flex;align-items:center;padding:0 6px;gap:0;min-width:0}
+.proj-name-text{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 4px}
+.bv-inline{font-size:10px;color:var(--text2);font-weight:600;white-space:nowrap;
+  background:var(--surface2);padding:1px 5px;border-radius:4px;margin-right:4px;flex-shrink:0}
+.edit-btn{
+  opacity:0;padding:2px 5px;font-size:11px;border-radius:5px;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text2);cursor:pointer;transition:opacity .15s;flex-shrink:0;
+}
+tbody tr:hover .edit-btn{opacity:1}
+.edit-btn:hover{background:var(--surface2)}
+
+/* ── Progress bar ── */
+.prog-wrap{width:100%;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;background:var(--green);transition:width .3s}
+.prog-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.cell-prog{padding:0 8px}
+.prog-inner{display:flex;flex-direction:column;gap:3px}
+
+/* ── Remaining chip ── */
+.rem-chip{
+  display:inline-block;padding:2px 7px;border-radius:20px;
+  font-size:11px;font-weight:600;background:var(--surface2);color:var(--text2);
+}
+.rem-chip.done  {background:#dcfce7;color:#16a34a}
+.rem-chip.active{background:#ede9fe;color:var(--accent)}
+.rem-chip.scaled{background:#fff3cd;color:#92400e}
+.rem-chip.late  {background:#fee2e2;color:#991b1b}
+
+/* ── Business value ── */
+.bv-cell{font-size:12px;font-weight:700;color:var(--text2);text-align:center}
+
+/* ── Dates cell ── */
+.dates-cell{font-size:11px;color:var(--text2);line-height:1.7;padding:0 8px}
+.dates-cell b{color:var(--text);font-weight:600}
+.deadline-row{display:flex;align-items:center;gap:3px;font-size:11px}
+.deadline-ok  {color:#64748b}
+.deadline-late{color:#dc2626;font-weight:600}
+
+/* ── Week header cells ── */
+.wk-hdr{
+  width:var(--week-w);min-width:var(--week-w);
+  text-align:center;font-size:11px;font-weight:500;
+  color:var(--text2);padding:0 4px;
+  border-right:1px solid var(--border);
+  position:relative;
+}
+.wk-hdr.wk-today      {color:var(--red);font-weight:700}
+.wk-hdr.wk-month-start{border-left:2px solid #c7d2fe;color:var(--accent);font-weight:700}
+
+/* ── Today vertical line ── */
+.today-line{
+  position:absolute;top:0;bottom:0;left:0;
+  width:2px;background:var(--red);opacity:.75;
+  pointer-events:none;z-index:5;
+}
+
+/* ── Timeline cells ── */
+.wk-cell{
+  width:var(--week-w);min-width:var(--week-w);
+  padding:0;position:relative;
+  border-right:1px dotted #e2e8f0;
+  border-bottom:1px solid var(--border);
+}
+.wk-cell.wk-today-col {background:rgba(239,68,68,.04)}
+.wk-cell.wk-month-start{border-left:1px solid #c7d2fe}
+.wk-cell.wk-past      {background:rgba(0,0,0,.012)}
+
+/* ── Gantt bar ── */
+.bar-cell{padding:0;position:relative;border-bottom:1px solid var(--border)}
+.bar-cell.wk-today-col{background:rgba(239,68,68,.04)}
+
+.g-bar{
+  position:absolute;top:50%;transform:translateY(-50%);
+  height:28px;border-radius:7px;
+  display:flex;align-items:center;overflow:hidden;
+  font-size:11px;font-weight:600;color:#fff;
+  pointer-events:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+.g-bar-fill{
+  position:absolute;top:0;left:0;height:100%;
+  background:rgba(255,255,255,.20);
+}
+.g-bar-label{
+  position:relative;z-index:1;padding:0 8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+}
+/* deadline indicator on bar */
+.deadline-flag{
+  position:absolute;top:0;bottom:0;
+  width:3px;background:#fff;opacity:.8;
+  pointer-events:none;z-index:4;
+}
+
+/* ── Empty state ── */
+.empty{padding:80px 20px;text-align:center;color:var(--text2)}
+.empty .icon{font-size:52px;margin-bottom:16px}
+.empty p{font-size:14px;max-width:360px;margin:0 auto 20px}
+
+/* ── Modal ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;backdrop-filter:blur(2px);
+}
+.overlay.hidden{display:none}
+.modal{
+  background:var(--surface);border-radius:14px;
+  padding:28px;width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.18);
+}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:22px}
+.form-group{margin-bottom:14px}
+.form-group label{
+  display:block;font-size:12px;font-weight:600;
+  color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;
+}
+.form-group input,.form-group select{
+  width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;
+  font-size:14px;color:var(--text);background:var(--bg);transition:border .15s;outline:none;
+}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group label.required{font-weight:700}
+.form-group input.input-error,.form-group select.input-error{
+  border-color:#dc2626;border-width:2px;background:#fff5f5;
+}
+.form-hint{font-size:11px;color:var(--text2);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.modal-section{
+  margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);
+}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+
+/* ── Legend ── */
+.legend{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:6px 20px;background:var(--surface);
+  border-top:1px solid var(--border);
+  font-size:11px;color:var(--text2);flex-shrink:0;
+}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:14px;height:10px;border-radius:3px}
+
+/* ── Scrollbar ── */
+.gantt-wrapper::-webkit-scrollbar{width:8px;height:10px}
+.gantt-wrapper::-webkit-scrollbar-track{background:var(--surface2);border-radius:5px}
+.gantt-wrapper::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:5px}
+.gantt-wrapper::-webkit-scrollbar-thumb:hover{background:#64748b}
+.gantt-wrapper::-webkit-scrollbar-corner{background:var(--surface2)}
+
+/* ── GP select colors ── */
+select#f-gp option[value=P1]{background:#fecdd3}
+select#f-gp option[value=P2]{background:#fed7aa}
+select#f-gp option[value=P3]{background:#bfdbfe}
+select#f-gp option[value=P4]{background:#ddd6fe}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <div class="topbar-logo">Product Planner <span>— Gantt</span></div>
+
+  <!-- Export -->
+  <button class="btn" onclick="exportData()" title="Exporter la planification en JSON">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Exporter
+  </button>
+
+  <!-- Import -->
+  <button class="btn" onclick="document.getElementById('import-file').click()" title="Importer une planification sauvegardée">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 9V1M4 4l3-3 3 3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Importer
+  </button>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+
+  <div style="width:1px;height:24px;background:var(--border);margin:0 2px"></div>
+
+  <button class="btn btn-primary" onclick="openAddModal()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Nouveau projet
+  </button>
+</div>
+
+<!-- ── Config bar ── -->
+<div class="cfg-bar">
+  <label>Date de départ
+    <input type="date" id="cfg-date" oninput="onCfgChange()">
+  </label>
+  <label>Développeurs dans l'équipe
+    <input type="number" id="cfg-devs" min="1" max="50" oninput="onCfgChange()">
+  </label>
+  <div class="cfg-sep"></div>
+  <span id="cfg-summary" style="color:var(--accent);font-weight:600"></span>
+  <div style="display:flex;align-items:center;gap:6px;margin-left:8px">
+    <button class="btn btn-sm" onclick="setZoom(-1)" title="Dézoomer (semaines plus étroites)">−</button>
+    <span id="zoom-label" style="font-size:12px;color:var(--text2);min-width:36px;text-align:center;font-weight:600"></span>
+    <button class="btn btn-sm" onclick="setZoom(+1)" title="Zoomer (semaines plus larges)">+</button>
+  </div>
+</div>
+
+<!-- ── Gantt ── -->
+<div class="gantt-wrapper" id="gantt-wrapper">
+  <table id="gantt-table">
+    <thead id="gantt-head"></thead>
+    <tbody id="gantt-body"></tbody>
+  </table>
+  <div id="empty-state" class="empty hidden">
+    <div class="icon">📋</div>
+    <p>Aucun projet pour l'instant. Ajoutez votre premier projet pour démarrer la planification.</p>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Ajouter un projet</button>
+  </div>
+</div>
+
+<!-- ── Legend ── -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#374151"></div>
+    Non démarré P1
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#6b7280"></div>
+    P2
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#d1d5db"></div>
+    P3
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f3f4f6"></div>
+    P4
+  </div>
+
+  <div style="border-left:1px solid var(--border);margin:0 12px;height:24px"></div>
+
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#0284c7"></div>
+    En cours P1
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#3b82f6"></div>
+    P2
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#60a5fa"></div>
+    P3
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#93c5fd"></div>
+    P4
+  </div>
+
+  <div style="border-left:1px solid var(--border);margin:0 12px;height:24px"></div>
+
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#10b981"></div>
+    Fini P1
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#34d399"></div>
+    P2
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#6ee7b7"></div>
+    P3
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#a7f3d0"></div>
+    P4
+  </div>
+
+  <div style="border-left:1px solid var(--border);margin:0 12px;height:24px"></div>
+
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#dc2626"></div>
+    Hors deadline P1
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#ef4444"></div>
+    P2
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f87171"></div>
+    P3
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#fca5a5"></div>
+    P4
+  </div>
+
+  <div style="border-left:1px solid var(--border);margin:0 12px;height:24px"></div>
+
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#fbbf24"></div>
+    Durée allongée
+  </div>
+
+  <div style="margin-left:auto;color:var(--text2)">⠿ glisser pour priorité · ← → naviguer dans le temps</div>
+</div>
+
+<!-- ── Modal ── -->
+<div class="overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Nouveau projet</h2>
+
+    <div class="form-group">
+      <label class="required">Nom du projet</label>
+      <input type="text" id="f-name" placeholder="ex: Refonte onboarding" autocomplete="off">
+    </div>
+
+    <div class="modal-section">Estimation &amp; équipe</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="required">Charge totale (semaines)</label>
+        <input type="number" id="f-weeks" min="1" max="104" placeholder="8">
+        <div class="form-hint">Avec l'équipe nominale</div>
+      </div>
+      <div class="form-group">
+        <label>Avancement actuel (%)</label>
+        <input type="number" id="f-progress" min="0" max="100" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="required">Développeurs nécessaires</label>
+      <input type="number" id="f-devs" min="1" max="20">
+      <div class="form-hint">Si insuffisants, la durée est ajustée proportionnellement</div>
+    </div>
+
+    <div class="modal-section">Priorisation &amp; business</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="required">Priorité globale</label>
+        <select id="f-gp">
+          <option value="">— Sélectionner —</option>
+          <option value="P1">P1 — Critique</option>
+          <option value="P2">P2 — Haute</option>
+          <option value="P3">P3 — Normale</option>
+          <option value="P4">P4 — Basse</option>
+        </select>
+        <div class="form-hint">Définit la couleur de la barre</div>
+      </div>
+      <div class="form-group">
+        <label>Business value</label>
+        <input type="number" id="f-bv" min="0" max="1000" placeholder="ex: 8">
+        <div class="form-hint">Valeur métier (optionnel)</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Date limite de livraison (deadline)</label>
+      <input type="date" id="f-deadline">
+      <div class="form-hint">Si la fin planifiée dépasse cette date, la barre passe en rouge</div>
+    </div>
+
+    <div class="modal-section hidden" id="f-prio-section">Ordre dans la file</div>
+    <div class="form-group hidden" id="f-prio-group">
+      <label>Position dans la file (priorité)</label>
+      <input type="number" id="f-prio" min="1" placeholder="auto">
+      <div class="form-hint">1 = exécuté en premier. Vide = dernière place.</div>
+    </div>
+
+    <input type="hidden" id="f-id">
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm hidden" id="modal-delete-btn" onclick="deleteProject()" style="margin-right:auto">Supprimer</button>
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProject()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  Constants
+// ─────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'product-planner-v3';
+const PAST_WEEKS  = 8;
+const FUTURE_BUF  = 4;
+
+// Zoom: index into ZOOM_STEPS, persisted in localStorage
+const ZOOM_STEPS  = [24, 32, 48, 64, 96, 128, 180];
+const ZOOM_DEFAULT = 3; // index → 64px
+let zoomIdx = parseInt(localStorage.getItem('planner-zoom') ?? ZOOM_DEFAULT);
+if (isNaN(zoomIdx) || zoomIdx < 0 || zoomIdx >= ZOOM_STEPS.length) zoomIdx = ZOOM_DEFAULT;
+
+function WEEK_PX() { return ZOOM_STEPS[zoomIdx]; }
+
+function setZoom(delta) {
+  zoomIdx = Math.max(0, Math.min(ZOOM_STEPS.length - 1, zoomIdx + delta));
+  localStorage.setItem('planner-zoom', zoomIdx);
+  // Re-render keeping scroll position centred on today
+  const wrap = document.getElementById('gantt-wrapper');
+  wrap._scrollInit = false;
+  render();
+}
+
+function updateZoomLabel() {
+  const el = document.getElementById('zoom-label');
+  if (el) el.textContent = WEEK_PX() + 'px';
+}
+
+// Bar colors by state and priority
+// Logique:
+// 1) Hors deadline (late) → ROUGE (nuance par priorité)
+// 2) Fini (100%) → VERT (nuance par priorité)
+// 3) Non démarré (0%) → GRIS (nuance par priorité: très foncé P1 → clair P4)
+// 4) En cours (0% < progress < 100%) → BLEU (nuance par priorité)
+// 5) Scaled (durée allongée) → AMBRE (priorité sur tout)
+
+const GRAD = {
+  // Non démarré: gris de très foncé (P1) à clair (P4) — couleurs unies
+  notStartedP1: '#374151',  // gris très foncé
+  notStartedP2: '#6b7280',  // gris moyen foncé
+  notStartedP3: '#d1d5db',  // gris moyen clair
+  notStartedP4: '#f3f4f6',  // gris clair
+
+  // En cours: bleu saturé (P1) à clair (P4) — couleurs unies
+  inProgressP1: '#0284c7',  // bleu très saturé
+  inProgressP2: '#3b82f6',  // bleu saturé
+  inProgressP3: '#60a5fa',  // bleu normal
+  inProgressP4: '#93c5fd',  // bleu clair
+
+  // Fini: vert saturé (P1) à clair (P4) — couleurs unies
+  doneP1:       '#10b981',  // vert saturé
+  doneP2:       '#34d399',  // vert saturé
+  doneP3:       '#6ee7b7',  // vert normal
+  doneP4:       '#a7f3d0',  // vert clair
+
+  // Hors deadline: rouge saturé (P1) à clair (P4) — couleurs unies
+  lateP1:       '#dc2626',  // rouge saturé
+  lateP2:       '#ef4444',  // rouge saturé
+  lateP3:       '#f87171',  // rouge normal
+  lateP4:       '#fca5a5',  // rouge clair
+
+  // Durée allongée (cas spécial, ignore les autres priorités)
+  scaled:       '#fbbf24',  // ambre
+};
+
+// ─────────────────────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────────────────────
+let state = {
+  config:   { startDate: todayISO(), totalDevs: 3 },
+  projects: [],
+  nextId:   1
+};
+
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) Object.assign(state, JSON.parse(raw));
+    // backfill new fields for existing projects
+    state.projects.forEach(p => {
+      if (!p.globalPriority) p.globalPriority = 'P3';
+      if (p.businessValue === undefined) p.businessValue = null;
+      if (p.deadline === undefined) p.deadline = null;
+    });
+  } catch(e) {}
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ─────────────────────────────────────────────────────────────
+//  Date helpers — weeks start on Monday
+// ─────────────────────────────────────────────────────────────
+function getMondayOf(dateStr) {
+  const d   = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d;
+}
+function weekToDate(w) {
+  const base = getMondayOf(state.config.startDate);
+  base.setDate(base.getDate() + w * 7);
+  return base;
+}
+function formatDate(d) {
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+function todayWeek() {
+  const base  = getMondayOf(state.config.startDate);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  base.setHours(0,0,0,0);
+  return Math.floor((today - base) / (7 * 24 * 3600 * 1000));
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Config UI
+// ─────────────────────────────────────────────────────────────
+function initConfig() {
+  document.getElementById('cfg-date').value = state.config.startDate;
+  document.getElementById('cfg-devs').value = state.config.totalDevs;
+}
+function onCfgChange() {
+  state.config.startDate = document.getElementById('cfg-date').value || todayISO();
+  state.config.totalDevs = Math.max(1, parseInt(document.getElementById('cfg-devs').value) || 1);
+  saveState(); render();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Scheduling — event-driven bin-packing with proportional scaling
+// ─────────────────────────────────────────────────────────────
+function schedule() {
+  const { config, projects } = state;
+  if (!projects.length) return [];
+  const totalDevs = config.totalDevs;
+
+  const result = projects.map(p => {
+    const rem = Math.max(0, Math.ceil(p.totalWeeks * (1 - p.progress / 100)));
+    return { ...p, startWeek: null, endWeek: null, remainingWeeks: rem, scaled: false };
+  });
+
+  result.forEach(p => { if (p.remainingWeeks === 0) { p.startWeek = 0; p.endWeek = 0; } });
+
+  const pending = result.filter(p => p.remainingWeeks > 0)
+                        .sort((a, b) => a.priority - b.priority);
+
+  const devFreeAt = new Array(totalDevs).fill(0);
+  let currentWeek = 0, safety = 0;
+
+  while (pending.length > 0 && safety++ < 200000) {
+    const freeNow = devFreeAt
+      .map((v, i) => [v, i])
+      .filter(([v]) => v <= currentWeek)
+      .sort(([a], [b]) => a - b);
+    let avail = freeNow.length;
+
+    if (avail === 0) {
+      const future = devFreeAt.filter(t => t > currentWeek);
+      if (!future.length) break;
+      currentWeek = Math.min(...future);
+      continue;
+    }
+
+    let freeQueue  = [...freeNow];
+    let topHandled = false;
+
+    for (let i = 0; i < pending.length && avail > 0; ) {
+      const proj = pending[i];
+      const need = Math.min(proj.devsNeeded || 1, totalDevs);
+
+      if (need <= avail) {
+        const idx = freeQueue.splice(0, need).map(([, j]) => j);
+        proj.startWeek = currentWeek;
+        proj.endWeek   = currentWeek + proj.remainingWeeks;
+        idx.forEach(j => { devFreeAt[j] = proj.endWeek; });
+        avail -= need;
+        pending.splice(i, 1);
+        if (i === 0) topHandled = true;
+      } else if (!topHandled && i === 0) {
+        // Proportional scaling: start with fewer devs
+        const actualDevs    = avail;
+        const devWeekBudget = proj.remainingWeeks * need;
+        const scaledWeeks   = Math.ceil(devWeekBudget / actualDevs);
+        const idx           = freeQueue.splice(0, actualDevs).map(([, j]) => j);
+        proj.startWeek      = currentWeek;
+        proj.endWeek        = currentWeek + scaledWeeks;
+        proj.remainingWeeks = scaledWeeks;
+        proj.scaled         = true;
+        idx.forEach(j => { devFreeAt[j] = proj.endWeek; });
+        avail = 0;
+        pending.splice(i, 1);
+        topHandled = true;
+      } else {
+        i++;
+      }
+    }
+
+    if (pending.length > 0) {
+      const future = devFreeAt.filter(t => t > currentWeek);
+      if (!future.length) break;
+      currentWeek = Math.min(...future);
+    }
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Bar gradient logic
+//  Priority: 1) late (end > deadline)  2) scaled (proportional)
+//            3) not started (0%)       4) in progress by globalPriority
+// ─────────────────────────────────────────────────────────────
+function getBarGradient(proj, endWeek) {
+  const priority = proj.globalPriority || 'P3';
+
+  // 1) Durée allongée (scaled) — surpasse tout
+  if (proj.scaled) return GRAD.scaled;
+
+  // 2) Hors deadline (late) — RED
+  if (proj.deadline) {
+    const endDate      = weekToDate(endWeek);
+    const deadlineDate = new Date(proj.deadline + 'T00:00:00');
+    if (endDate > deadlineDate) return GRAD[`late${priority}`];
+  }
+
+  // 3) Fini (100%) — GREEN
+  if (proj.progress >= 100) return GRAD[`done${priority}`];
+
+  // 4) Non démarré (0%) — GREY
+  if (proj.progress <= 0) return GRAD[`notStarted${priority}`];
+
+  // 5) En cours (0% < progress < 100%) — BLUE
+  return GRAD[`inProgress${priority}`];
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Render
+// ─────────────────────────────────────────────────────────────
+function render() {
+  const scheduled = schedule();
+  const projects  = state.projects;
+  const count     = projects.length;
+
+  const maxEnd = scheduled.reduce((m, p) => Math.max(m, p.endWeek || 0), 0);
+  document.getElementById('cfg-summary').textContent = count
+    ? `${count} projet${count>1?'s':''} · ${maxEnd} semaine${maxEnd>1?'s':''} de charge planifiée`
+    : '';
+
+  if (!count) {
+    document.getElementById('gantt-table').style.display = 'none';
+    document.getElementById('empty-state').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('gantt-table').style.display = '';
+  document.getElementById('empty-state').classList.add('hidden');
+
+  // Apply dynamic week width to CSS variable + update label
+  document.documentElement.style.setProperty('--week-w', WEEK_PX() + 'px');
+  updateZoomLabel();
+
+  const tw     = todayWeek();
+  const wStart = -PAST_WEEKS;
+  const wEnd   = Math.max(maxEnd + FUTURE_BUF, PAST_WEEKS + 12);
+
+  const schedMap = {};
+  scheduled.forEach(p => { schedMap[p.id] = p; });
+
+  const sorted = [...projects].sort((a, b) => a.priority - b.priority);
+
+  // ── Header ──
+  let htr = '<tr>'
+    + '<th class="c-handle st-h" title="Ordre">⠿</th>'
+    + '<th class="c-name   st-h">Projet</th>'
+    + '<th class="c-gp     st-h" title="Priorité globale">P.</th>'
+    + '<th class="c-devs   st-h">Dévs</th>'
+    + '<th class="c-prog   st-h">Avancement</th>'
+    + '<th class="c-rem    st-h">Restant</th>'
+    + '<th class="c-bv     st-h" title="Business value">BV</th>'
+    + '<th class="c-dates  st-h">Dates / Deadline</th>';
+
+  const wp = WEEK_PX();
+  for (let w = wStart; w < wEnd; w++) {
+    const d = weekToDate(w);
+    // Abbreviate label based on zoom level so text never widens the column
+    let label;
+    if (wp >= 64)      label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    else if (wp >= 40) label = d.getDate();          // just day number: "15"
+    else if (wp >= 28) label = d.getDate() <= 7      // only show first week of month
+                               ? d.toLocaleDateString('fr-FR', { month: 'short' }) : '';
+    else               label = '';                   // no text at 24 px
+
+    let cls = 'wk-hdr';
+    if (w === tw)         cls += ' wk-today';
+    if (d.getDate() <= 7) cls += ' wk-month-start';
+    const line = w === tw ? '<div class="today-line"></div>' : '';
+    // Wrap in a fixed-width div so the <th> can NEVER expand beyond wp
+    htr += `<th class="${cls}"><div style="width:${wp}px;overflow:hidden;white-space:nowrap;display:flex;align-items:center;justify-content:center">${line}${label}</div></th>`;
+  }
+  htr += '</tr>';
+  document.getElementById('gantt-head').innerHTML = htr;
+
+  // ── Body ──
+  let rows = '';
+
+  sorted.forEach((proj, idx) => {
+    const s          = schedMap[proj.id];
+    const remaining  = s ? s.remainingWeeks : 0;
+    const isDone     = proj.progress >= 100;
+    const isActive   = proj.progress > 0 && !isDone;
+    const gp         = proj.globalPriority || 'P3';
+
+    // Is the project late vs its deadline?
+    const isLate = !isDone && proj.deadline && s && s.endWeek
+      ? weekToDate(s.endWeek) > new Date(proj.deadline + 'T00:00:00')
+      : false;
+
+    const gradient = isDone
+      ? 'linear-gradient(90deg,#065f46 0%,#10b981 100%)'
+      : getBarGradient({ ...proj, scaled: s && s.scaled }, s ? s.endWeek : 0);
+
+    const progPct = Math.min(100, Math.max(0, proj.progress));
+
+    // Remaining chip
+    let remChip;
+    if (isDone)           remChip = `<span class="rem-chip done">✓ Terminé</span>`;
+    else if (isLate)      remChip = `<span class="rem-chip late">⚠ ${remaining}s</span>`;
+    else if (s && s.scaled) remChip = `<span class="rem-chip scaled">${remaining}s ↗</span>`;
+    else                  remChip = `<span class="rem-chip ${isActive?'active':''}">${remaining}s</span>`;
+
+    // Dates cell
+    const startD = s && s.startWeek !== null ? formatDate(weekToDate(s.startWeek)) : '—';
+    const endD   = s && s.endWeek            ? formatDate(weekToDate(s.endWeek))   : '—';
+    let datesHtml;
+    if (isDone) {
+      datesHtml = `<span style="color:var(--green)">✓ Complété</span>`;
+    } else {
+      datesHtml = `<b>${startD}</b> → <b>${endD}</b>`;
+      if (proj.deadline) {
+        const dlDate = new Date(proj.deadline + 'T00:00:00');
+        const dlStr  = dlDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
+        datesHtml += `<div class="deadline-row ${isLate ? 'deadline-late' : 'deadline-ok'}">
+          ${isLate ? '⚠' : '⏰'} dl : ${dlStr}
+        </div>`;
+      }
+    }
+
+    // BV cell
+    const bvHtml = proj.businessValue !== null && proj.businessValue !== ''
+      ? `<span class="bv-cell">${proj.businessValue}</span>`
+      : '<span style="color:#cbd5e1">—</span>';
+
+    // ── Timeline cells ──
+    let wkCells = '';
+
+    if (!isDone && s && s.startWeek !== null && s.startWeek < wEnd) {
+      const barStart = s.startWeek;
+      const barEnd   = Math.min(s.endWeek, wEnd);
+      const barSpan  = barEnd - barStart;
+
+      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw);
+
+      // barW unused — bar now uses left/right instead of explicit px width
+      const fillW  = Math.round(progPct);
+      const label  = barSpan >= 2
+        ? `${proj.name} — ${progPct}%`
+        : (barSpan === 1 ? `${progPct}%` : '');
+
+      // Today line inside bar cell
+      let todayInBar = '';
+      if (tw >= barStart && tw < barEnd) {
+        const lx = (tw - barStart) * WEEK_PX();
+        todayInBar = `<div class="today-line" style="left:${lx}px"></div>`;
+      }
+
+      // Deadline flag inside bar cell
+      let dlFlag = '';
+      if (proj.deadline && s.endWeek > 0) {
+        const dlDate   = new Date(proj.deadline + 'T00:00:00');
+        const dlWeek   = Math.round((dlDate - getMondayOf(state.config.startDate)) / (7*24*3600*1000));
+        if (dlWeek >= barStart && dlWeek < barEnd) {
+          const dlX = (dlWeek - barStart) * WEEK_PX();
+          dlFlag = `<div class="deadline-flag" style="left:${dlX}px" title="Deadline"></div>`;
+        }
+      }
+
+      let barCls = 'bar-cell';
+      if (tw >= barStart && tw < barEnd) barCls += ' wk-today-col';
+
+      wkCells += `<td class="${barCls}" colspan="${barSpan}">
+        ${todayInBar}${dlFlag}
+        <div class="g-bar" style="left:3px;right:3px;background:${gradient}">
+          <div class="g-bar-fill" style="width:${fillW}%"></div>
+          <div class="g-bar-label">${label}</div>
+        </div>
+      </td>`;
+
+      for (let w = barEnd; w < wEnd; w++) wkCells += mkEmptyCell(w, tw);
+    } else {
+      for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw);
+    }
+
+    rows += `
+      <tr draggable="true" data-id="${proj.id}">
+        <td class="c-handle st handle" title="Glisser pour réordonner">⠿</td>
+        <td class="c-name st">
+          <div class="cell-name">
+            <span class="prio">${proj.priority}</span>
+            <span class="proj-name-text" title="${proj.name}">${proj.name}</span>
+            ${proj.businessValue !== null && proj.businessValue !== '' ? `<span class="bv-inline">BV:${proj.businessValue}</span>` : ''}
+            <button class="edit-btn" onclick="openEditModal(${proj.id})">✎</button>
+          </div>
+        </td>
+        <td class="c-gp st" style="text-align:center">
+          <span class="gp-badge gp-${gp}">${gp}</span>
+        </td>
+        <td class="c-devs st" style="font-weight:600;color:${proj.devsNeeded>=state.config.totalDevs?'var(--yellow)':'var(--text)'}">
+          ${proj.devsNeeded}/${state.config.totalDevs}
+        </td>
+        <td class="c-prog st">
+          <div class="cell-prog">
+            <div class="prog-inner">
+              <div class="prog-label">${progPct}%</div>
+              <div class="prog-wrap"><div class="prog-fill" style="width:${progPct}%"></div></div>
+            </div>
+          </div>
+        </td>
+        <td class="c-rem st" style="text-align:center">${remChip}</td>
+        <td class="c-bv st" style="text-align:center">${bvHtml}</td>
+        <td class="c-dates st"><div class="dates-cell">${datesHtml}</div></td>
+        ${wkCells}
+      </tr>`;
+  });
+
+  document.getElementById('gantt-body').innerHTML = rows;
+  bindDrag();
+
+  // Auto-scroll to today on first render
+  const wrap = document.getElementById('gantt-wrapper');
+  if (!wrap._scrollInit) {
+    wrap._scrollInit = true;
+    const stickyW  = 36 + 210 + 52 + 64 + 110 + 82 + 56 + 200;
+    const todayLeft = stickyW + PAST_WEEKS * WEEK_PX() - 2 * WEEK_PX();
+    wrap.scrollLeft = Math.max(0, todayLeft);
+  }
+}
+
+function mkEmptyCell(w, tw) {
+  const wp  = WEEK_PX();
+  let cls = 'wk-cell';
+  if (w === tw)                     cls += ' wk-today-col';
+  if (weekToDate(w).getDate() <= 7) cls += ' wk-month-start';
+  if (w < 0)                        cls += ' wk-past';
+  // Explicit inline width is mandatory: CSS variables alone are unreliable
+  // across zoom changes and table reflow cycles.
+  return `<td class="${cls}" style="width:${wp}px;min-width:${wp}px;max-width:${wp}px">${w === tw ? '<div class="today-line"></div>' : ''}</td>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Modal
+// ─────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'Nouveau projet';
+  document.getElementById('f-id').value       = '';
+  document.getElementById('f-name').value     = '';
+  document.getElementById('f-weeks').value    = '';
+  document.getElementById('f-progress').value = '0';
+  document.getElementById('f-devs').value     = '';
+  document.getElementById('f-gp').value       = '';
+  document.getElementById('f-bv').value       = '';
+  document.getElementById('f-deadline').value = '';
+  document.getElementById('f-prio').value     = '';
+  document.getElementById('f-prio-group').classList.add('hidden');
+  document.getElementById('f-prio-section').classList.add('hidden');
+  document.getElementById('modal-delete-btn').classList.add('hidden');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('f-name').focus(), 50);
+}
+
+function openEditModal(id) {
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+  document.getElementById('modal-title').textContent = 'Modifier le projet';
+  document.getElementById('f-id').value       = id;
+  document.getElementById('f-name').value     = proj.name;
+  document.getElementById('f-weeks').value    = proj.totalWeeks;
+  document.getElementById('f-progress').value = proj.progress;
+  document.getElementById('f-devs').value     = proj.devsNeeded;
+  document.getElementById('f-gp').value       = proj.globalPriority || '';
+  document.getElementById('f-bv').value       = proj.businessValue !== null ? proj.businessValue : '';
+  document.getElementById('f-deadline').value = proj.deadline || '';
+  document.getElementById('f-prio').value     = proj.priority;
+  document.getElementById('f-prio-group').classList.remove('hidden');
+  document.getElementById('f-prio-section').classList.remove('hidden');
+  document.getElementById('modal-delete-btn').classList.remove('hidden');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('f-name').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && !document.getElementById('modal-overlay').classList.contains('hidden')) {
+    saveProject();
+  }
+});
+
+// Nettoyer les erreurs au fur et à mesure de l'édition
+document.getElementById('f-name').addEventListener('input', e => {
+  if (e.target.value.trim()) e.target.classList.remove('input-error');
+});
+document.getElementById('f-weeks').addEventListener('input', e => {
+  if (parseFloat(e.target.value) >= 0.5) e.target.classList.remove('input-error');
+});
+document.getElementById('f-devs').addEventListener('input', e => {
+  if (parseInt(e.target.value) >= 1) e.target.classList.remove('input-error');
+});
+document.getElementById('f-gp').addEventListener('change', e => {
+  if (e.target.value) e.target.classList.remove('input-error');
+});
+
+function saveProject() {
+  // Nettoyer les erreurs précédentes
+  document.getElementById('f-name').classList.remove('input-error');
+  document.getElementById('f-weeks').classList.remove('input-error');
+  document.getElementById('f-devs').classList.remove('input-error');
+  document.getElementById('f-gp').classList.remove('input-error');
+
+  const name     = document.getElementById('f-name').value.trim();
+  const weeks    = parseFloat(document.getElementById('f-weeks').value);
+  const progress = Math.min(100, Math.max(0, parseFloat(document.getElementById('f-progress').value) || 0));
+  const devsRaw  = parseInt(document.getElementById('f-devs').value);
+  const devs     = devsRaw >= 1 ? devsRaw : null;
+  const gp       = document.getElementById('f-gp').value || null;
+  const bvRaw    = document.getElementById('f-bv').value;
+  const bv       = bvRaw !== '' ? parseFloat(bvRaw) : null;
+  const deadline = document.getElementById('f-deadline').value || null;
+  const prioRaw  = document.getElementById('f-prio').value;
+  const id       = document.getElementById('f-id').value;
+
+  let hasError = false;
+  if (!name) {
+    document.getElementById('f-name').classList.add('input-error');
+    document.getElementById('f-name').focus();
+    hasError = true;
+  }
+  if (!weeks || weeks < 0.5) {
+    document.getElementById('f-weeks').classList.add('input-error');
+    if (!hasError) document.getElementById('f-weeks').focus();
+    hasError = true;
+  }
+  if (!devs) {
+    document.getElementById('f-devs').classList.add('input-error');
+    if (!hasError) document.getElementById('f-devs').focus();
+    hasError = true;
+  }
+  if (!gp) {
+    document.getElementById('f-gp').classList.add('input-error');
+    if (!hasError) document.getElementById('f-gp').focus();
+    hasError = true;
+  }
+  if (hasError) return;
+
+  const existingId = id ? parseInt(id) : null;
+
+  if (existingId) {
+    const proj = state.projects.find(p => p.id === existingId);
+    if (!proj) return;
+    const maxPrio = state.projects.length;
+    const newPrio = prioRaw ? Math.min(maxPrio, Math.max(1, parseInt(prioRaw))) : proj.priority;
+    if (newPrio !== proj.priority) reorderPriority(existingId, newPrio);
+    Object.assign(proj, { name, totalWeeks: weeks, progress, devsNeeded: devs,
+      globalPriority: gp, businessValue: bv, deadline, priority: newPrio });
+  } else {
+    state.projects.push({
+      id: state.nextId++, name, totalWeeks: weeks, progress, devsNeeded: devs,
+      globalPriority: gp, businessValue: bv, deadline,
+      priority: state.projects.length + 1
+    });
+  }
+
+  saveState(); closeModal(); render();
+}
+
+function deleteProject() {
+  const id = parseInt(document.getElementById('f-id').value);
+  if (!id || !confirm('Supprimer ce projet ?')) return;
+  state.projects = state.projects.filter(p => p.id !== id);
+  normalizePriorities();
+  saveState(); closeModal(); render();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Priority helpers
+// ─────────────────────────────────────────────────────────────
+function normalizePriorities() {
+  [...state.projects].sort((a, b) => a.priority - b.priority)
+    .forEach((p, i) => { p.priority = i + 1; });
+}
+function reorderPriority(movedId, newPrio) {
+  const sorted = [...state.projects].sort((a, b) => a.priority - b.priority);
+  const moved  = sorted.find(p => p.id === movedId);
+  if (!moved) return;
+  const others = sorted.filter(p => p.id !== movedId);
+  others.splice(newPrio - 1, 0, moved);
+  others.forEach((p, i) => { p.priority = i + 1; });
+  moved.priority = newPrio;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Drag & Drop
+// ─────────────────────────────────────────────────────────────
+let dragId = null;
+
+function bindDrag() {
+  document.querySelectorAll('#gantt-body tr').forEach(row => {
+    row.addEventListener('dragstart', onDragStart);
+    row.addEventListener('dragover',  onDragOver);
+    row.addEventListener('dragleave', onDragLeave);
+    row.addEventListener('drop',      onDrop);
+    row.addEventListener('dragend',   onDragEnd);
+  });
+}
+function onDragStart(e) {
+  dragId = parseInt(this.dataset.id);
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(dragId));
+}
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const r = this.getBoundingClientRect();
+  this.classList.remove('drag-over-top','drag-over-bottom');
+  this.classList.add(e.clientY < r.top + r.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+}
+function onDragLeave() { this.classList.remove('drag-over-top','drag-over-bottom'); }
+function onDrop(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over-top','drag-over-bottom');
+  const targetId = parseInt(this.dataset.id);
+  if (!targetId || targetId === dragId) return;
+  const r     = this.getBoundingClientRect();
+  const after = e.clientY >= r.top + r.height / 2;
+  const sorted = [...state.projects].sort((a, b) => a.priority - b.priority);
+  const fi = sorted.findIndex(p => p.id === dragId);
+  if (fi < 0) return;
+  const [moved] = sorted.splice(fi, 1);
+  let ii = sorted.findIndex(p => p.id === targetId);
+  if (after) ii++;
+  sorted.splice(ii, 0, moved);
+  sorted.forEach((p, i) => { p.priority = i + 1; });
+  saveState(); render();
+}
+function onDragEnd() {
+  document.querySelectorAll('#gantt-body tr')
+    .forEach(r => r.classList.remove('dragging','drag-over-top','drag-over-bottom'));
+  dragId = null;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Export / Import
+// ─────────────────────────────────────────────────────────────
+
+function exportData() {
+  const now    = new Date();
+  const stamp  = now.toISOString().slice(0, 16).replace('T', '_').replace(':', 'h');
+  const payload = {
+    exportedAt: now.toISOString(),
+    version: 3,
+    ...state
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `product-planner_${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validate minimal structure
+      if (!Array.isArray(data.projects)) {
+        alert('Fichier invalide : aucun champ "projects" trouvé.');
+        return;
+      }
+
+      const projectCount = data.projects.length;
+      const exportedAt   = data.exportedAt
+        ? new Date(data.exportedAt).toLocaleString('fr-FR')
+        : 'date inconnue';
+
+      const confirmed = confirm(
+        `Importer cette planification ?\n\n` +
+        `📁 Fichier : ${file.name}\n` +
+        `📅 Exportée le : ${exportedAt}\n` +
+        `📋 ${projectCount} projet${projectCount > 1 ? 's' : ''}\n\n` +
+        `⚠️ Cela remplacera la planification actuelle (${state.projects.length} projet${state.projects.length > 1 ? 's' : ''}).`
+      );
+      if (!confirmed) return;
+
+      // Restore state, backfill missing fields
+      state.config   = data.config   || state.config;
+      state.projects = data.projects || [];
+      state.nextId   = data.nextId   || (Math.max(0, ...state.projects.map(p => p.id)) + 1);
+
+      state.projects.forEach(p => {
+        if (!p.globalPriority)         p.globalPriority  = 'P3';
+        if (p.businessValue === undefined) p.businessValue = null;
+        if (p.deadline === undefined)  p.deadline        = null;
+      });
+
+      saveState();
+      initConfig();
+
+      // Reset scroll so today is visible again
+      const wrap = document.getElementById('gantt-wrapper');
+      wrap._scrollInit = false;
+
+      render();
+    } catch (err) {
+      alert('Erreur lors de la lecture du fichier JSON :\n' + err.message);
+    }
+  };
+  reader.readAsText(file);
+
+  // Reset input so the same file can be re-imported
+  event.target.value = '';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Boot
+// ─────────────────────────────────────────────────────────────
+loadState();
+initConfig();
+render();
+</script>
+</body>
+</html>
