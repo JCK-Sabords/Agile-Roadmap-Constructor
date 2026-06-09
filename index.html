@@ -1002,18 +1002,22 @@ function render() {
     // ── Timeline cells ──
     let wkCells = '';
 
-    // Deadline week (relative to the Monday of startDate) — shown as a double
-    // vertical line on the timeline, even when it falls outside the bar span.
-    const dlWeek = proj.deadline
-      ? Math.round((new Date(proj.deadline + 'T00:00:00') - getMondayOf(state.config.startDate)) / (7*24*3600*1000))
-      : null;
+    // Deadline week + sub-week day offset (0=Mon … 6=Sun)
+    // so the line aligns to the exact day, not just the Monday of the week
+    let dlWeek = null, dlDayOffset = 0;
+    if (proj.deadline) {
+      dlWeek = dateToWeek(proj.deadline);
+      const dlDate = new Date(proj.deadline + 'T00:00:00');
+      // getDay(): 0=Sun,1=Mon,…,6=Sat → convert to Mon=0 … Sun=6
+      dlDayOffset = (dlDate.getDay() + 6) % 7;
+    }
 
     if (!isDone && s && s.startWeek !== null && s.startWeek < wEnd) {
       const barStart = s.startWeek;
       const barEnd   = Math.min(s.endWeek, wEnd);
       const barSpan  = barEnd - barStart;
 
-      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek);
+      for (let w = wStart; w < barStart; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
 
       // barW unused — bar now uses left/right instead of explicit px width
       const fillW  = Math.round(progPct);
@@ -1031,7 +1035,7 @@ function render() {
       // Deadline double line inside bar cell (if it falls within the bar span)
       let dlFlag = '';
       if (dlWeek !== null && dlWeek >= barStart && dlWeek < barEnd) {
-        const dlX = (dlWeek - barStart) * WEEK_PX();
+        const dlX = (dlWeek - barStart) * WEEK_PX() + dlDayOffset * WEEK_PX() / 7;
         dlFlag = `<div class="deadline-line" style="left:${dlX}px" title="Deadline"></div>`;
       }
 
@@ -1046,9 +1050,9 @@ function render() {
         </div>
       </td>`;
 
-      for (let w = barEnd; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek);
+      for (let w = barEnd; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
     } else {
-      for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek);
+      for (let w = wStart; w < wEnd; w++) wkCells += mkEmptyCell(w, tw, dlWeek, dlDayOffset);
     }
 
     rows += `
@@ -1094,15 +1098,15 @@ function render() {
   }
 }
 
-function mkEmptyCell(w, tw, dlWeek) {
+function mkEmptyCell(w, tw, dlWeek, dlDayOffset) {
   const wp  = WEEK_PX();
   let cls = 'wk-cell';
   if (w === tw)                     cls += ' wk-today-col';
   if (weekToDate(w).getDate() <= 7) cls += ' wk-month-start';
   if (w < 0)                        cls += ' wk-past';
   const todayLine = w === tw ? '<div class="today-line"></div>' : '';
-  const dlLine    = (dlWeek !== undefined && dlWeek !== null && w === dlWeek)
-    ? '<div class="deadline-line" title="Deadline"></div>' : '';
+  const dlLine    = (dlWeek != null && w === dlWeek)
+    ? `<div class="deadline-line" style="left:${(dlDayOffset||0)*wp/7}px" title="Deadline"></div>` : '';
   // Explicit inline width is mandatory: CSS variables alone are unreliable
   // across zoom changes and table reflow cycles.
   return `<td class="${cls}" style="width:${wp}px;min-width:${wp}px;max-width:${wp}px">${todayLine}${dlLine}</td>`;
